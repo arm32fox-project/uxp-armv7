@@ -67,6 +67,7 @@
 #include "mozilla/Likely.h"
 #include "mozilla/Sprintf.h"
 #include "mozilla/Unused.h"
+#include "../../js/public/HashTable.h"
 
 // Other Classes
 #include "mozilla/dom/BarProps.h"
@@ -9450,6 +9451,96 @@ struct BrowserCompartmentMatcher : public js::CompartmentFilter {
   }
 };
 
+class MultiCompartmentMatcher : public js::CompartmentFilter {
+  friend class WindowRequestCleanupEvent;
+
+  js::HashSet<JSCompartment*,js::DefaultHasher<JSCompartment*>,js::SystemAllocPolicy> compartments;
+
+  MultiCompartmentMatcher()
+  {
+    compartments.init();
+  }
+  
+public: 
+  virtual bool match(JSCompartment* c) const override
+  {
+    return compartments.has(c);
+  }
+};
+
+class PendingWindows {
+  friend class WindowRequestCleanupEvent;
+  friend class WindowDestroyedEvent;
+  
+  nsCOMArray<nsIWeakReference> windows;
+};
+
+// only to be accessed from main thread
+static PendingWindows gPendingWindows;
+
+// if set to >1, then not all js::NukeCrossCompartmentWrappers() happen soon
+#define START_NUKING_WINDOWS_COUNT (10)
+
+class WindowRequestCleanupEvent : public Runnable
+{
+  friend class WindowDestroyedEvent;
+
+  WindowRequestCleanupEvent() {
+  }
+
+public:
+  NS_IMETHOD Run()
+  {
+    
+    MOZ_ASSERT(NS_IsMainThread()); // accesses are only okay in main thread
+    if (gPendingWindows.windows.Count() >= START_NUKING_WINDOWS_COUNT) {
+      AutoSafeJSContext cx;
+      MultiCompartmentMatcher multiCompartmentMatchers[js::NUM_NukeReferencesToWindow];
+
+      #if defined(DEBUG)
+        printf_stderr("Nuking wrappers for %d compartments at once.\n",
+        	            gPendingWindows.windows.Count());
+      #endif
+
+      for (int i = 0; i<gPendingWindows.windows.Count(); i++) {
+        nsCOMPtr<nsISupports> window = do_QueryReferent(gPendingWindows.windows[i]);
+
+        if (window) {
+          nsGlobalWindow* win = nsGlobalWindow::FromSupports(window);
+          nsGlobalWindow* currentInner = win->IsInnerWindow() ? win : win->GetCurrentInnerWindowInternal();
+          NS_ENSURE_TRUE(currentInner, NS_OK);
+          
+          JS::Rooted<JSObject*> obj(cx, currentInner->FastGetGlobalJSObject());
+          
+          // We only want to nuke wrappers for the chrome->content case
+          if (obj && !js::IsSystemCompartment(js::GetObjectCompartment(obj))) {
+            
+            multiCompartmentMatchers[
+              win->IsInnerWindow()
+                ? js::DontNukeWindowReferences
+                : js::NukeWindowReferences
+            ].compartments.putNew(js::GetObjectCompartment(obj));
+          }
+        }
+      }
+      
+      for (int i = 0;i<js::NUM_NukeReferencesToWindow;i++) {
+        MultiCompartmentMatcher& multiCompartmentMatcher =
+          multiCompartmentMatchers[(js::NukeReferencesToWindow) i];
+        if (!multiCompartmentMatcher.compartments.empty()) {
+          js::NukeCrossCompartmentWrappers(cx,
+                                           BrowserCompartmentMatcher(),
+                                           multiCompartmentMatcher,
+                                           (js::NukeReferencesToWindow) i);
+        }
+      }
+      
+      gPendingWindows.windows.Clear();
+    }
+
+    return NS_OK;
+  }
+};
 
 class WindowDestroyedEvent : public Runnable
 {
@@ -9484,22 +9575,25 @@ public:
     }
 #endif
 
-    nsCOMPtr<nsISupports> window = do_QueryReferent(mWindow);
-    if (!skipNukeCrossCompartment && window) {
-      nsGlobalWindow* win = nsGlobalWindow::FromSupports(window);
-      nsGlobalWindow* currentInner = win->IsInnerWindow() ? win : win->GetCurrentInnerWindowInternal();
-      NS_ENSURE_TRUE(currentInner, NS_OK);
-
-      AutoSafeJSContext cx;
-      JS::Rooted<JSObject*> obj(cx, currentInner->FastGetGlobalJSObject());
-      // We only want to nuke wrappers for the chrome->content case
-      if (obj && !js::IsSystemCompartment(js::GetObjectCompartment(obj))) {
-        js::NukeCrossCompartmentWrappers(cx,
-                                         BrowserCompartmentMatcher(),
-                                         js::SingleCompartment(js::GetObjectCompartment(obj)),
-                                         win->IsInnerWindow() ? js::DontNukeWindowReferences
-                                                              : js::NukeWindowReferences);
-      }
+    if (!skipNukeCrossCompartment) {
+      MOZ_ASSERT(NS_IsMainThread()); // accesses are only okay in main thread
+      /*
+        js::NukeCrossCompartmentWrappers() may be a very expensive operation
+        (its runtime is linear to the number of compartments). Thus,
+        do not call js::NukeCrossCompartmentWrappers() directly. Instead,
+        add all windows for such a call to the gPendingWindows list and emit
+        a WindowRequestCleanupEvent. In loaded situations, the
+        WindowRequestCleanupEvent needs some time to be actually processed.
+        During this time, more WindowDestroyedEvent come in, adding more
+        windows to the gPendingWindows list. Once the first
+        WindowRequestCleanupEvent is processed, the gPendingWindows list
+        has coalesced some windows to be processed. Hence, these windows can
+        be processed at once, reducing the impact of the expensive
+        js::NukeCrossCompartmentWrappers() operation.
+      */
+      gPendingWindows.windows.AppendObject(mWindow);  
+      nsCOMPtr<nsIRunnable> runnable = new WindowRequestCleanupEvent();
+      return NS_DispatchToCurrentThread(runnable);
     }
 
     return NS_OK;
