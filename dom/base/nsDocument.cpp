@@ -395,6 +395,21 @@ nsIdentifierMapEntry::FireChangeCallbacks(Element* aOldElement,
   }
 }
 
+void
+nsIdentifierMapEntry::ClearAndNotify()
+{
+  Element* currentElement = mIdContentList.SafeElementAt(0);
+  mIdContentList.Clear();
+  if (currentElement) {
+    FireChangeCallbacks(currentElement, nullptr);
+  }
+  mNameContentList = nullptr;
+  if (mImageElement) {
+    SetImageElement(nullptr);
+  }
+  mChangeCallbacks = nullptr;
+}
+
 namespace {
 
 struct PositionComparator
@@ -1422,11 +1437,11 @@ nsDocument::~nsDocument()
   delete mSubDocuments;
   mSubDocuments = nullptr;
 
+  nsAutoScriptBlocker scriptBlocker;
+
   // Destroy link map now so we don't waste time removing
   // links one by one
   DestroyElementMaps();
-
-  nsAutoScriptBlocker scriptBlocker;
 
   for (uint32_t indx = mChildren.ChildCount(); indx-- != 0; ) {
     mChildren.ChildAt(indx)->UnbindFromTree();
@@ -1953,34 +1968,23 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 }
 
 void
-nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup,
-                       nsIPrincipal* aPrincipal)
-{
-  NS_PRECONDITION(aURI, "Null URI passed to ResetToURI");
-
-  if (gDocumentLeakPRLog && MOZ_LOG_TEST(gDocumentLeakPRLog, LogLevel::Debug)) {
-    PR_LogPrint("DOCUMENT %p ResetToURI %s", this,
-                aURI->GetSpecOrDefault().get());
-  }
-
-  mSecurityInfo = nullptr;
-
-  mDocumentLoadGroup = nullptr;
-
+nsDocument::DisconnectNodeTree() {
   // Delete references to sub-documents and kill the subdocument map,
-  // if any. It holds strong references
+  // if any. This is not strictly needed, but makes the node tree
+  // teardown a bit faster.
   delete mSubDocuments;
   mSubDocuments = nullptr;
-
-  // Destroy link map now so we don't waste time removing
-  // links one by one
-  DestroyElementMaps();
 
   bool oldVal = mInUnlinkOrDeletion;
   mInUnlinkOrDeletion = true;
   uint32_t count = mChildren.ChildCount();
   { // Scope for update
     MOZ_AUTO_DOC_UPDATE(this, UPDATE_CONTENT_MODEL, true);
+
+    // Destroy link map now so we don't waste time removing
+    // links one by one
+    DestroyElementMaps();
+
     for (int32_t i = int32_t(count) - 1; i >= 0; i--) {
       nsCOMPtr<nsIContent> content = mChildren.ChildAt(i);
 
@@ -2003,6 +2007,22 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup,
                "After removing all children, there should be no root elem");
   }
   mInUnlinkOrDeletion = oldVal;
+}
+
+void
+nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup,
+                       nsIPrincipal* aPrincipal)
+{
+  NS_PRECONDITION(aURI, "Null URI passed to ResetToURI");
+
+  if (gDocumentLeakPRLog && MOZ_LOG_TEST(gDocumentLeakPRLog, LogLevel::Debug)) {
+    PR_LogPrint("DOCUMENT %p ResetToURI %s", this,
+                aURI->GetSpecOrDefault().get());
+  }
+
+  mSecurityInfo = nullptr;
+
+  mDocumentLoadGroup = nullptr;
 
   // Reset our stylesheets
   ResetStylesheetsToURI(aURI);
@@ -2013,6 +2033,8 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup,
     mListenerManager = nullptr;
   }
 
+  DisconnectNodeTree();
+  
   // Release the stylesheets list.
   mDOMStyleSheets = nullptr;
 
@@ -4490,18 +4512,6 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
     mLayoutHistoryState = nullptr;
     SetScopeObject(aScriptGlobalObject);
     mHasHadDefaultView = true;
-#ifdef DEBUG
-    if (!mWillReparent) {
-      // We really shouldn't have a wrapper here but if we do we need to make sure
-      // it has the correct parent.
-      JSObject *obj = GetWrapperPreserveColor();
-      if (obj) {
-        JSObject *newScope = aScriptGlobalObject->GetGlobalJSObject();
-        NS_ASSERTION(js::GetGlobalForObjectCrossCompartment(obj) == newScope,
-                     "Wrong scope, this is really bad!");
-      }
-    }
-#endif
 
     if (mAllowDNSPrefetch) {
       nsCOMPtr<nsIDocShell> docShell(mDocumentContainer);
@@ -8955,7 +8965,14 @@ nsDocument::DestroyElementMaps()
   mStyledLinksCleared = true;
 #endif
   mStyledLinks.Clear();
+
+  // Notify ID change listeners before clearing the identifier map.
+  for (auto iter = mIdentifierMap.Iter(); !iter.Done(); iter.Next()) {
+    iter.Get()->ClearAndNotify();
+  }
+
   mIdentifierMap.Clear();
+
   ++mExpandoAndGeneration.generation;
 }
 
@@ -9054,7 +9071,8 @@ nsDocument::CloneDocHelper(nsDocument* clone) const
 }
 
 void
-nsDocument::SetReadyStateInternal(ReadyState rs)
+nsDocument::SetReadyStateInternal(ReadyState rs,
+                                  bool updateTimingInformation)
 {
   mReadyState = rs;
   if (rs == READYSTATE_UNINITIALIZED) {
@@ -9063,7 +9081,12 @@ nsDocument::SetReadyStateInternal(ReadyState rs)
     // transition undetectable by Web content.
     return;
   }
-  if (mTiming) {
+
+  if (updateTimingInformation && READYSTATE_LOADING == rs) {
+    mLoadingTimeStamp = mozilla::TimeStamp::Now();
+  }
+
+  if (updateTimingInformation && mTiming) {
     switch (rs) {
       case READYSTATE_LOADING:
         mTiming->NotifyDOMLoading(nsIDocument::GetDocumentURI());
@@ -9078,10 +9101,6 @@ nsDocument::SetReadyStateInternal(ReadyState rs)
         NS_WARNING("Unexpected ReadyState value");
         break;
     }
-  }
-  // At the time of loading start, we don't have timing object, record time.
-  if (READYSTATE_LOADING == rs) {
-    mLoadingTimeStamp = mozilla::TimeStamp::Now();
   }
 
   RefPtr<AsyncEventDispatcher> asyncDispatcher =
