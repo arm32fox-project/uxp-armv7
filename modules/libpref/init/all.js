@@ -1260,6 +1260,7 @@ pref("javascript.options.strict",           false);
 #ifdef DEBUG
 pref("javascript.options.strict.debug",     false);
 #endif
+pref("javascript.options.unboxed_objects",  false);
 pref("javascript.options.baselinejit",      true);
 pref("javascript.options.ion",              true);
 pref("javascript.options.asmjs",            true);
@@ -2036,8 +2037,6 @@ pref("network.proxy.autoconfig_retry_interval_max", 300);  // 5 minutes
 
 // Master switch for HSTS usage (security <-> privacy tradeoff)
 pref("network.stricttransportsecurity.enabled", true);
-// Use the HSTS preload list by default
-pref("network.stricttransportsecurity.preloadlist", true);
 
 // Use JS mDNS as a fallback
 pref("network.mdns.use_js_fallback", false);
