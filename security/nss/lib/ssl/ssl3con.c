@@ -98,6 +98,10 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,   SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, SSL_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,   SSL_ALLOWED, PR_TRUE, PR_FALSE},
+ { TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256, SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,   SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384, SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_ECDHE_RSA_WITH_CAMELLIA_256_GCM_SHA384,   SSL_ALLOWED, PR_FALSE, PR_FALSE},
    /* TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA is out of order to work around
     * bug 946147.
     */
@@ -123,6 +127,8 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_DHE_DSS_WITH_AES_128_GCM_SHA256,     SSL_ALLOWED, PR_FALSE, PR_FALSE},
  { TLS_DHE_RSA_WITH_AES_256_GCM_SHA384,     SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_DHE_DSS_WITH_AES_256_GCM_SHA384,     SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,   SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_DHE_RSA_WITH_CAMELLIA_256_GCM_SHA384,   SSL_ALLOWED, PR_FALSE, PR_FALSE},
  { TLS_DHE_RSA_WITH_AES_128_CBC_SHA,        SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_DHE_DSS_WITH_AES_128_CBC_SHA,        SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_DHE_RSA_WITH_AES_128_CBC_SHA256,     SSL_ALLOWED, PR_TRUE,  PR_FALSE},
@@ -151,6 +157,8 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  /* RSA */
  { TLS_RSA_WITH_AES_128_GCM_SHA256,         SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_RSA_WITH_AES_256_GCM_SHA384,         SSL_ALLOWED, PR_TRUE,  PR_FALSE},
+ { TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256,    SSL_ALLOWED, PR_FALSE, PR_FALSE},
+ { TLS_RSA_WITH_CAMELLIA_256_GCM_SHA384,    SSL_ALLOWED, PR_FALSE, PR_FALSE},
  { TLS_RSA_WITH_AES_128_CBC_SHA,            SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_RSA_WITH_AES_128_CBC_SHA256,         SSL_ALLOWED, PR_TRUE,  PR_FALSE},
  { TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,       SSL_ALLOWED, PR_FALSE, PR_FALSE},
@@ -297,6 +305,14 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] =
         cipher_camellia_256, ssl_mac_sha, kea_dhe_dss, ssl_hash_none },
       { TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,
         cipher_camellia_256, ssl_mac_sha, kea_dhe_rsa, ssl_hash_none },
+      { TLS_DHE_RSA_WITH_CAMELLIA_256_GCM_SHA384,
+        cipher_camellia_256_gcm, ssl_mac_aead, kea_dhe_rsa, ssl_hash_sha384},
+      { TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+        cipher_camellia_128_gcm, ssl_mac_aead, kea_dhe_rsa, ssl_hash_sha256},
+      { TLS_RSA_WITH_CAMELLIA_256_GCM_SHA384,
+        cipher_camellia_256_gcm, ssl_mac_aead, kea_rsa, ssl_hash_sha384},
+      { TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256,
+        cipher_camellia_128_gcm, ssl_mac_aead, kea_rsa, ssl_hash_sha256},
 
       { TLS_DHE_RSA_WITH_AES_128_GCM_SHA256, cipher_aes_128_gcm, ssl_mac_aead, kea_dhe_rsa, ssl_hash_sha256 },
       { TLS_RSA_WITH_AES_128_GCM_SHA256, cipher_aes_128_gcm, ssl_mac_aead, kea_rsa, ssl_hash_sha256 },
@@ -308,6 +324,10 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] =
       { TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, cipher_aes_256, ssl_hmac_sha384, kea_ecdhe_ecdsa, ssl_hash_sha384 },
       { TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, cipher_aes_256, ssl_hmac_sha384, kea_ecdhe_rsa, ssl_hash_sha384 },
 
+      { TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384, cipher_camellia_256_gcm, ssl_mac_aead, kea_ecdhe_ecdsa, ssl_hash_sha384},
+      { TLS_ECDHE_RSA_WITH_CAMELLIA_256_GCM_SHA384, cipher_camellia_256_gcm, ssl_mac_aead, kea_ecdhe_rsa, ssl_hash_sha384},
+      { TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256, cipher_camellia_128_gcm, ssl_mac_aead, kea_ecdhe_ecdsa, ssl_hash_sha256},
+      { TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256, cipher_camellia_128_gcm, ssl_mac_aead, kea_ecdhe_rsa, ssl_hash_sha256},
       { TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_CBC_SHA384, cipher_camellia_256, ssl_hmac_sha384, kea_ecdhe_ecdsa, ssl_hash_sha384 },
       { TLS_ECDHE_RSA_WITH_CAMELLIA_256_CBC_SHA384, cipher_camellia_256, ssl_hmac_sha384, kea_ecdhe_rsa, ssl_hash_sha384 },
       { TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_CBC_SHA256, cipher_camellia_128, ssl_hmac_sha256, kea_ecdhe_ecdsa, ssl_hash_sha256 },
@@ -600,6 +620,14 @@ ssl3_CipherSuiteAllowedForVersionRange(ssl3CipherSuite cipherSuite,
         case TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256:
         case TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256:
         case TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256:
+        case TLS_RSA_WITH_CAMELLIA_128_GCM_SHA256:
+        case TLS_RSA_WITH_CAMELLIA_256_GCM_SHA384:
+        case TLS_DHE_RSA_WITH_CAMELLIA_128_GCM_SHA256:
+        case TLS_DHE_RSA_WITH_CAMELLIA_256_GCM_SHA384:
+        case TLS_ECDHE_ECDSA_WITH_CAMELLIA_128_GCM_SHA256:
+        case TLS_ECDHE_ECDSA_WITH_CAMELLIA_256_GCM_SHA384:
+        case TLS_ECDHE_RSA_WITH_CAMELLIA_128_GCM_SHA256:
+        case TLS_ECDHE_RSA_WITH_CAMELLIA_256_GCM_SHA384:
             return vrange->max >= SSL_LIBRARY_VERSION_TLS_1_2 &&
                    vrange->min < SSL_LIBRARY_VERSION_TLS_1_3;
 
