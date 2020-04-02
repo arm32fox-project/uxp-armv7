@@ -210,6 +210,7 @@ SSL_GetPreliminaryChannelInfo(PRFileDesc *fd,
 #define C_SJ "SKIPJACK", ssl_calg_sj
 #define C_AESGCM "AES-GCM", ssl_calg_aes_gcm
 #define C_CHACHA20 "CHACHA20POLY1305", ssl_calg_chacha20
+#define C_CAMELLIAGCM "CAMELLIA-GCM", ssl_calg_camellia_gcm
 
 /* "block cipher" sizes */
 #define B_256 256, 256, 256

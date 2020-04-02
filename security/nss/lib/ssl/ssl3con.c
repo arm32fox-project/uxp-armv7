@@ -401,6 +401,7 @@ static const SSLCipher2Mech alg2Mech[] = {
     { ssl_calg_camellia, CKM_CAMELLIA_CBC },
     { ssl_calg_seed, CKM_SEED_CBC },
     { ssl_calg_aes_gcm, CKM_AES_GCM },
+    { ssl_calg_camellia_gcm , CKM_CAMELLIA_GCM },
     { ssl_calg_chacha20, CKM_NSS_CHACHA20_POLY1305 },
 };
 
@@ -1816,6 +1817,68 @@ ssl3_AESGCM(const ssl3KeyMaterial *keys,
 }
 
 static SECStatus
+ssl3_CamelliaGCM(const ssl3KeyMaterial *keys,
+                 PRBool doDecrypt,
+                 unsigned char *out,
+                 unsigned int *outlen,
+                 unsigned int maxout,
+                 const unsigned char *in,
+                 unsigned int inlen,
+                 const unsigned char *additionalData,
+                 unsigned int additionalDataLen)
+{
+    SECItem param;
+    SECStatus rv = SECFailure;
+    unsigned char nonce[12];
+    unsigned int uOutLen;
+    CK_GCM_PARAMS gcmParams;
+
+    const int tagSize = 16;
+    const int explicitNonceLen = 8;
+
+    /* See https://tools.ietf.org/html/rfc5288#section-3 for details of how the
+     * nonce is formed. */
+    memcpy(nonce, keys->iv, 4);
+    if (doDecrypt) {
+        memcpy(nonce + 4, in, explicitNonceLen);
+        in += explicitNonceLen;
+        inlen -= explicitNonceLen;
+        *outlen = 0;
+    } else {
+        if (maxout < explicitNonceLen) {
+            PORT_SetError(SEC_ERROR_INPUT_LEN);
+            return SECFailure;
+        }
+        /* Use the 64-bit sequence number as the explicit nonce. */
+        memcpy(nonce + 4, additionalData, explicitNonceLen);
+        memcpy(out, additionalData, explicitNonceLen);
+        out += explicitNonceLen;
+        maxout -= explicitNonceLen;
+        *outlen = explicitNonceLen;
+    }
+
+    param.type = siBuffer;
+    param.data = (unsigned char *)&gcmParams;
+    param.len = sizeof(gcmParams);
+    gcmParams.pIv = nonce;
+    gcmParams.ulIvLen = sizeof(nonce);
+    gcmParams.pAAD = (unsigned char *)additionalData; /* const cast */
+    gcmParams.ulAADLen = additionalDataLen;
+    gcmParams.ulTagBits = tagSize * 8;
+
+    if (doDecrypt) {
+        rv = PK11_Decrypt(keys->key, CKM_CAMELLIA_GCM, &param, out, &uOutLen,
+                          maxout, in, inlen);
+    } else {
+        rv = PK11_Encrypt(keys->key, CKM_CAMELLIA_GCM, &param, out, &uOutLen,
+                          maxout, in, inlen);
+    }
+    *outlen += (int)uOutLen;
+
+    return rv;
+}
+
+static SECStatus
 ssl3_ChaCha20Poly1305(const ssl3KeyMaterial *keys, PRBool doDecrypt,
                       unsigned char *out, unsigned int *outlen, unsigned int maxout,
                       const unsigned char *in, unsigned int inlen,
@@ -1891,6 +1954,9 @@ ssl3_InitPendingContexts(sslSocket *ss, ssl3CipherSpec *spec)
         switch (calg) {
             case ssl_calg_aes_gcm:
                 spec->aead = ssl3_AESGCM;
+                break;
+            case ssl_calg_camellia_gcm:
+                spec->aead = ssl3_CamelliaGCM;
                 break;
             case ssl_calg_chacha20:
                 spec->aead = ssl3_ChaCha20Poly1305;
