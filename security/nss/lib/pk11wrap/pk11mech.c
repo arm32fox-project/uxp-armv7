@@ -798,6 +798,7 @@ PK11_GetIVLength(CK_MECHANISM_TYPE type)
         case CKM_CAST5_CBC_PAD:
             return 8;
         case CKM_AES_GCM:
+        case CKM_CAMELLIA_GCM:
         case CKM_NSS_CHACHA20_POLY1305:
             return 12;
         case CKM_SEED_CBC:

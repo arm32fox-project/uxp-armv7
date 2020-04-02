@@ -421,7 +421,7 @@ static const SSLCipher2Mech alg2Mech[] = {
     { ssl_calg_camellia, CKM_CAMELLIA_CBC },
     { ssl_calg_seed, CKM_SEED_CBC },
     { ssl_calg_aes_gcm, CKM_AES_GCM },
-    { ssl_calg_camellia_gcm , CKM_CAMELLIA_GCM },
+    { ssl_calg_camellia_gcm, CKM_CAMELLIA_GCM },
     { ssl_calg_chacha20, CKM_NSS_CHACHA20_POLY1305 },
 };
 
