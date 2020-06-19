@@ -864,7 +864,6 @@ BaselineInspector::expectedPropertyAccessInputType(jsbytecode* pc)
           case ICStub::GetElem_String:
           case ICStub::GetElem_Dense:
           case ICStub::GetElem_TypedArray:
-          case ICStub::GetElem_UnboxedArray:
             stubType = MIRType::Object;
             break;
 

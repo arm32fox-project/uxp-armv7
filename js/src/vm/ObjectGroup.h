@@ -505,7 +505,7 @@ class ObjectGroup : public gc::TenuredCell
         UnknownIndex  // Make an array with an unknown element type.
     };
 
-    // Create an ArrayObject or UnboxedArrayObject with the specified elements
+    // Create an ArrayObject with the specified elements
     // and a group specialized for the elements.
     static JSObject* newArrayObject(ExclusiveContext* cx, const Value* vp, size_t length,
                                     NewObjectKind newKind,

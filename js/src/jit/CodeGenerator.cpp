@@ -3209,9 +3209,7 @@ CodeGenerator::visitSetPropertyPolymorphicT(LSetPropertyPolymorphicT* ins)
 void
 CodeGenerator::visitElements(LElements* lir)
 {
-    Address elements(ToRegister(lir->object()),
-                     lir->mir()->unboxed() ? UnboxedArrayObject::offsetOfElements()
-                                           : NativeObject::offsetOfElements());
+    Address elements(ToRegister(lir->object()), NativeObject::offsetOfElements());
     masm.loadPtr(elements, ToRegister(lir->output()));
 }
 
@@ -5395,13 +5393,7 @@ CodeGenerator::visitNewArrayDynamicLength(LNewArrayDynamicLength* lir)
             canInline = false;
         }
     } else {
-        if (templateObject->as<UnboxedArrayObject>().hasInlineElements()) {
-            size_t nbytes =
-                templateObject->tenuredSizeOfThis() - UnboxedArrayObject::offsetOfInlineElements();
-            inlineLength = nbytes / templateObject->as<UnboxedArrayObject>().elementSize();
-        } else {
-            canInline = false;
-        }
+        MOZ_CRASH("UnboxedArrayObject -- should not get here");
     }
 
     if (canInline) {
@@ -7860,44 +7852,25 @@ CodeGenerator::visitSetInitializedLength(LSetInitializedLength* lir)
 void
 CodeGenerator::visitUnboxedArrayLength(LUnboxedArrayLength* lir)
 {
-    Register obj = ToRegister(lir->object());
-    Register result = ToRegister(lir->output());
-    masm.load32(Address(obj, UnboxedArrayObject::offsetOfLength()), result);
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 void
 CodeGenerator::visitUnboxedArrayInitializedLength(LUnboxedArrayInitializedLength* lir)
 {
-    Register obj = ToRegister(lir->object());
-    Register result = ToRegister(lir->output());
-    masm.load32(Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()), result);
-    masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), result);
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 void
 CodeGenerator::visitIncrementUnboxedArrayInitializedLength(LIncrementUnboxedArrayInitializedLength* lir)
 {
-    Register obj = ToRegister(lir->object());
-    masm.add32(Imm32(1), Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()));
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 void
 CodeGenerator::visitSetUnboxedArrayInitializedLength(LSetUnboxedArrayInitializedLength* lir)
 {
-    Register obj = ToRegister(lir->object());
-    RegisterOrInt32Constant key = ToRegisterOrInt32Constant(lir->length());
-    Register temp = ToRegister(lir->temp());
-
-    Address initLengthAddr(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength());
-    masm.load32(initLengthAddr, temp);
-    masm.and32(Imm32(UnboxedArrayObject::CapacityMask), temp);
-
-    if (key.isRegister())
-        masm.or32(key.reg(), temp);
-    else
-        masm.or32(Imm32(key.constant()), temp);
-
-    masm.store32(temp, initLengthAddr);
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 void
@@ -8213,28 +8186,7 @@ CodeGenerator::emitStoreElementHoleT(T* lir)
         emitStoreElementTyped(lir->value(), lir->mir()->value()->type(), lir->mir()->elementType(),
                               elements, index, 0);
     } else {
-        Register temp = ToRegister(lir->getTemp(0));
-        Address initLength(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength());
-        masm.load32(initLength, temp);
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), temp);
-        masm.branch32(Assembler::BelowOrEqual, temp, key, ool->entry());
-
-        ConstantOrRegister v = ToConstantOrRegister(lir->value(), lir->mir()->value()->type());
-
-        if (index->isConstant()) {
-            Address address(elements, ToInt32(index) * UnboxedTypeSize(unboxedType));
-            EmitUnboxedPreBarrier(masm, address, unboxedType);
-
-            masm.bind(ool->rejoinStore());
-            masm.storeUnboxedProperty(address, unboxedType, v, nullptr);
-        } else {
-            BaseIndex address(elements, ToRegister(index),
-                              ScaleFromElemWidth(UnboxedTypeSize(unboxedType)));
-            EmitUnboxedPreBarrier(masm, address, unboxedType);
-
-            masm.bind(ool->rejoinStore());
-            masm.storeUnboxedProperty(address, unboxedType, v, nullptr);
-        }
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     masm.bind(ool->rejoin());
@@ -8275,26 +8227,7 @@ CodeGenerator::emitStoreElementHoleV(T* lir)
         else
             masm.storeValue(value, BaseIndex(elements, ToRegister(index), TimesEight));
     } else {
-        Register temp = ToRegister(lir->getTemp(0));
-        Address initLength(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength());
-        masm.load32(initLength, temp);
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), temp);
-        masm.branch32(Assembler::BelowOrEqual, temp, key, ool->entry());
-
-        if (index->isConstant()) {
-            Address address(elements, ToInt32(index) * UnboxedTypeSize(unboxedType));
-            EmitUnboxedPreBarrier(masm, address, unboxedType);
-
-            masm.bind(ool->rejoinStore());
-            masm.storeUnboxedProperty(address, unboxedType, ConstantOrRegister(value), nullptr);
-        } else {
-            BaseIndex address(elements, ToRegister(index),
-                              ScaleFromElemWidth(UnboxedTypeSize(unboxedType)));
-            EmitUnboxedPreBarrier(masm, address, unboxedType);
-
-            masm.bind(ool->rejoinStore());
-            masm.storeUnboxedProperty(address, unboxedType, ConstantOrRegister(value), nullptr);
-        }
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     masm.bind(ool->rejoin());
@@ -8439,10 +8372,7 @@ CodeGenerator::visitOutOfLineStoreElementHole(OutOfLineStoreElementHole* ool)
         Address initLength(elements, ObjectElements::offsetOfInitializedLength());
         masm.branch32(Assembler::NotEqual, initLength, key, &callStub);
     } else {
-        Address initLength(object, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength());
-        masm.load32(initLength, ToRegister(temp));
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), ToRegister(temp));
-        masm.branch32(Assembler::NotEqual, ToRegister(temp), key, &callStub);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 #else
     masm.j(Assembler::NotEqual, &callStub);
@@ -8467,18 +8397,7 @@ CodeGenerator::visitOutOfLineStoreElementHole(OutOfLineStoreElementHole* ool)
 
         masm.dec32(&key);
     } else {
-        // Check array capacity.
-        masm.checkUnboxedArrayCapacity(object, key, ToRegister(temp), &callStub);
-
-        // Update initialized length.
-        masm.add32(Imm32(1), Address(object, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()));
-
-        // Update length if length < initializedLength.
-        Address lengthAddr(object, UnboxedArrayObject::offsetOfLength());
-        Label dontUpdate;
-        masm.branch32(Assembler::Above, lengthAddr, key, &dontUpdate);
-        masm.add32(Imm32(1), lengthAddr);
-        masm.bind(&dontUpdate);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     if ((ins->isStoreElementHoleT() || ins->isFallibleStoreElementT()) &&
@@ -8572,18 +8491,13 @@ typedef bool (*ConvertUnboxedObjectToNativeFn)(JSContext*, JSObject*);
 static const VMFunction ConvertUnboxedPlainObjectToNativeInfo =
     FunctionInfo<ConvertUnboxedObjectToNativeFn>(UnboxedPlainObject::convertToNative,
                                                  "UnboxedPlainObject::convertToNative");
-static const VMFunction ConvertUnboxedArrayObjectToNativeInfo =
-    FunctionInfo<ConvertUnboxedObjectToNativeFn>(UnboxedArrayObject::convertToNative,
-                                                 "UnboxedArrayObject::convertToNative");
 
 void
 CodeGenerator::visitConvertUnboxedObjectToNative(LConvertUnboxedObjectToNative* lir)
 {
     Register object = ToRegister(lir->getOperand(0));
 
-    OutOfLineCode* ool = oolCallVM(lir->mir()->group()->unboxedLayoutDontCheckGeneration().isArray()
-                                   ? ConvertUnboxedArrayObjectToNativeInfo
-                                   : ConvertUnboxedPlainObjectToNativeInfo,
+    OutOfLineCode* ool = oolCallVM(ConvertUnboxedPlainObjectToNativeInfo,
                                    lir, ArgList(object), StoreNothing());
 
     masm.branchPtr(Assembler::Equal, Address(object, JSObject::offsetOfGroup()),
@@ -8622,12 +8536,7 @@ CodeGenerator::emitArrayPopShift(LInstruction* lir, const MArrayPopShift* mir, R
         Address initLength(elementsTemp, ObjectElements::offsetOfInitializedLength());
         masm.branch32(Assembler::NotEqual, initLength, key, ool->entry());
     } else {
-        masm.loadPtr(Address(obj, UnboxedArrayObject::offsetOfElements()), elementsTemp);
-        masm.load32(Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()), lengthTemp);
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), lengthTemp);
-
-        Address lengthAddr(obj, UnboxedArrayObject::offsetOfLength());
-        masm.branch32(Assembler::NotEqual, lengthAddr, key, ool->entry());
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     // Test for length != 0. On zero length either take a VM call or generate
@@ -8688,10 +8597,7 @@ CodeGenerator::emitArrayPopShift(LInstruction* lir, const MArrayPopShift* mir, R
         masm.store32(lengthTemp, Address(elementsTemp, ObjectElements::offsetOfLength()));
         masm.store32(lengthTemp, Address(elementsTemp, ObjectElements::offsetOfInitializedLength()));
     } else {
-        // Unboxed arrays always have writable lengths. Adjust length and
-        // initializedLength.
-        masm.store32(lengthTemp, Address(obj, UnboxedArrayObject::offsetOfLength()));
-        masm.add32(Imm32(-1), Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()));
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     if (mir->mode() == MArrayPopShift::Shift) {
@@ -8758,22 +8664,7 @@ CodeGenerator::emitArrayPush(LInstruction* lir, const MArrayPush* mir, Register 
         // Do the store.
         masm.storeConstantOrRegister(value, BaseIndex(elementsTemp, length, TimesEight));
     } else {
-        // Load initialized length.
-        masm.load32(Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()), length);
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), length);
-
-        // Guard length == initializedLength.
-        Address lengthAddr(obj, UnboxedArrayObject::offsetOfLength());
-        masm.branch32(Assembler::NotEqual, lengthAddr, key, ool->entry());
-
-        // Guard length < capacity.
-        masm.checkUnboxedArrayCapacity(obj, key, elementsTemp, ool->entry());
-
-        // Load elements and do the store.
-        masm.loadPtr(Address(obj, UnboxedArrayObject::offsetOfElements()), elementsTemp);
-        size_t elemSize = UnboxedTypeSize(mir->unboxedType());
-        BaseIndex addr(elementsTemp, length, ScaleFromElemWidth(elemSize));
-        masm.storeUnboxedProperty(addr, mir->unboxedType(), value, nullptr);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     masm.inc32(&key);
@@ -8783,8 +8674,7 @@ CodeGenerator::emitArrayPush(LInstruction* lir, const MArrayPush* mir, Register 
         masm.store32(length, Address(elementsTemp, ObjectElements::offsetOfLength()));
         masm.store32(length, Address(elementsTemp, ObjectElements::offsetOfInitializedLength()));
     } else {
-        masm.store32(length, Address(obj, UnboxedArrayObject::offsetOfLength()));
-        masm.add32(Imm32(1), Address(obj, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()));
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     masm.bind(ool->rejoin());

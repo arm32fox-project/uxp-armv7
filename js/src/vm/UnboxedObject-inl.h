@@ -173,130 +173,13 @@ UnboxedPlainObject::layout() const
 }
 
 /////////////////////////////////////////////////////////////////////
-// UnboxedArrayObject
-/////////////////////////////////////////////////////////////////////
-
-inline const UnboxedLayout&
-UnboxedArrayObject::layout() const
-{
-    return group()->unboxedLayout();
-}
-
-inline void
-UnboxedArrayObject::setLength(ExclusiveContext* cx, uint32_t length)
-{
-    if (length > INT32_MAX) {
-        // Track objects with overflowing lengths in type information.
-        MarkObjectGroupFlags(cx, this, OBJECT_FLAG_LENGTH_OVERFLOW);
-    }
-
-    length_ = length;
-}
-
-inline void
-UnboxedArrayObject::setInitializedLength(uint32_t initlen)
-{
-    if (initlen < initializedLength()) {
-        switch (elementType()) {
-          case JSVAL_TYPE_STRING:
-            for (size_t i = initlen; i < initializedLength(); i++)
-                triggerPreBarrier<JSVAL_TYPE_STRING>(i);
-            break;
-          case JSVAL_TYPE_OBJECT:
-            for (size_t i = initlen; i < initializedLength(); i++)
-                triggerPreBarrier<JSVAL_TYPE_OBJECT>(i);
-            break;
-          default:
-            MOZ_ASSERT(!UnboxedTypeNeedsPreBarrier(elementType()));
-        }
-    }
-    setInitializedLengthNoBarrier(initlen);
-}
-
-template <JSValueType Type>
-inline bool
-UnboxedArrayObject::setElementSpecific(ExclusiveContext* cx, size_t index, const Value& v)
-{
-    MOZ_ASSERT(index < initializedLength());
-    MOZ_ASSERT(Type == elementType());
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-    return SetUnboxedValue(cx, this, JSID_VOID, p, elementType(), v, /* preBarrier = */ true);
-}
-
-template <JSValueType Type>
-inline void
-UnboxedArrayObject::setElementNoTypeChangeSpecific(size_t index, const Value& v)
-{
-    MOZ_ASSERT(index < initializedLength());
-    MOZ_ASSERT(Type == elementType());
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-    return SetUnboxedValueNoTypeChange(this, p, elementType(), v, /* preBarrier = */ true);
-}
-
-template <JSValueType Type>
-inline bool
-UnboxedArrayObject::initElementSpecific(ExclusiveContext* cx, size_t index, const Value& v)
-{
-    MOZ_ASSERT(index < initializedLength());
-    MOZ_ASSERT(Type == elementType());
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-    return SetUnboxedValue(cx, this, JSID_VOID, p, elementType(), v, /* preBarrier = */ false);
-}
-
-template <JSValueType Type>
-inline void
-UnboxedArrayObject::initElementNoTypeChangeSpecific(size_t index, const Value& v)
-{
-    MOZ_ASSERT(index < initializedLength());
-    MOZ_ASSERT(Type == elementType());
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-    return SetUnboxedValueNoTypeChange(this, p, elementType(), v, /* preBarrier = */ false);
-}
-
-template <JSValueType Type>
-inline Value
-UnboxedArrayObject::getElementSpecific(size_t index)
-{
-    MOZ_ASSERT(index < initializedLength());
-    MOZ_ASSERT(Type == elementType());
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-    return GetUnboxedValue(p, Type, /* maybeUninitialized = */ false);
-}
-
-template <JSValueType Type>
-inline void
-UnboxedArrayObject::triggerPreBarrier(size_t index)
-{
-    MOZ_ASSERT(UnboxedTypeNeedsPreBarrier(Type));
-
-    uint8_t* p = elements() + index * UnboxedTypeSize(Type);
-
-    switch (Type) {
-      case JSVAL_TYPE_STRING: {
-        JSString** np = reinterpret_cast<JSString**>(p);
-        JSString::writeBarrierPre(*np);
-        break;
-      }
-
-      case JSVAL_TYPE_OBJECT: {
-        JSObject** np = reinterpret_cast<JSObject**>(p);
-        JSObject::writeBarrierPre(*np);
-        break;
-      }
-
-      default:
-        MOZ_CRASH("Bad type");
-    }
-}
-
-/////////////////////////////////////////////////////////////////////
 // Combined methods for NativeObject and UnboxedArrayObject accesses.
 /////////////////////////////////////////////////////////////////////
 
 static inline bool
 HasAnyBoxedOrUnboxedDenseElements(JSObject* obj)
 {
-    return obj->isNative() || obj->is<UnboxedArrayObject>();
+    return obj->isNative();
 }
 
 static inline size_t
@@ -304,8 +187,6 @@ GetAnyBoxedOrUnboxedInitializedLength(JSObject* obj)
 {
     if (obj->isNative())
         return obj->as<NativeObject>().getDenseInitializedLength();
-    if (obj->is<UnboxedArrayObject>())
-        return obj->as<UnboxedArrayObject>().initializedLength();
     return 0;
 }
 
@@ -314,57 +195,40 @@ GetAnyBoxedOrUnboxedCapacity(JSObject* obj)
 {
     if (obj->isNative())
         return obj->as<NativeObject>().getDenseCapacity();
-    if (obj->is<UnboxedArrayObject>())
-        return obj->as<UnboxedArrayObject>().capacity();
     return 0;
 }
 
 static inline Value
 GetAnyBoxedOrUnboxedDenseElement(JSObject* obj, size_t index)
 {
-    if (obj->isNative())
-        return obj->as<NativeObject>().getDenseElement(index);
-    return obj->as<UnboxedArrayObject>().getElement(index);
+    return obj->as<NativeObject>().getDenseElement(index);
 }
 
 static inline size_t
 GetAnyBoxedOrUnboxedArrayLength(JSObject* obj)
 {
-    if (obj->is<ArrayObject>())
-        return obj->as<ArrayObject>().length();
-    return obj->as<UnboxedArrayObject>().length();
+    return obj->as<ArrayObject>().length();
 }
 
 static inline void
 SetAnyBoxedOrUnboxedArrayLength(JSContext* cx, JSObject* obj, size_t length)
 {
-    if (obj->is<ArrayObject>()) {
-        MOZ_ASSERT(length >= obj->as<ArrayObject>().length());
-        obj->as<ArrayObject>().setLength(cx, length);
-    } else {
-        MOZ_ASSERT(length >= obj->as<UnboxedArrayObject>().length());
-        obj->as<UnboxedArrayObject>().setLength(cx, length);
-    }
+    MOZ_ASSERT(length >= obj->as<ArrayObject>().length());
+    obj->as<ArrayObject>().setLength(cx, length);
 }
 
 static inline bool
 SetAnyBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, const Value& value)
 {
-    if (obj->isNative()) {
-        obj->as<NativeObject>().setDenseElementWithType(cx, index, value);
-        return true;
-    }
-    return obj->as<UnboxedArrayObject>().setElement(cx, index, value);
+    obj->as<NativeObject>().setDenseElementWithType(cx, index, value);
+    return true;
 }
 
 static inline bool
 InitAnyBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, const Value& value)
 {
-    if (obj->isNative()) {
-        obj->as<NativeObject>().initDenseElementWithType(cx, index, value);
-        return true;
-    }
-    return obj->as<UnboxedArrayObject>().initElement(cx, index, value);
+    obj->as<NativeObject>().initDenseElementWithType(cx, index, value);
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -374,9 +238,7 @@ InitAnyBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, co
 static inline JSValueType
 GetBoxedOrUnboxedType(JSObject* obj)
 {
-    if (obj->isNative())
-        return JSVAL_TYPE_MAGIC;
-    return obj->as<UnboxedArrayObject>().elementType();
+    return JSVAL_TYPE_MAGIC;
 }
 
 template <JSValueType Type>
@@ -385,7 +247,8 @@ HasBoxedOrUnboxedDenseElements(JSObject* obj)
 {
     if (Type == JSVAL_TYPE_MAGIC)
         return obj->isNative();
-    return obj->is<UnboxedArrayObject>() && obj->as<UnboxedArrayObject>().elementType() == Type;
+
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -394,7 +257,7 @@ GetBoxedOrUnboxedInitializedLength(JSObject* obj)
 {
     if (Type == JSVAL_TYPE_MAGIC)
         return obj->as<NativeObject>().getDenseInitializedLength();
-    return obj->as<UnboxedArrayObject>().initializedLength();
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -407,9 +270,7 @@ SetBoxedOrUnboxedInitializedLength(JSContext* cx, JSObject* obj, size_t initlen)
         if (initlen < oldInitlen)
             obj->as<NativeObject>().shrinkElements(cx, initlen);
     } else {
-        obj->as<UnboxedArrayObject>().setInitializedLength(initlen);
-        if (initlen < oldInitlen)
-            obj->as<UnboxedArrayObject>().shrinkElements(cx, initlen);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
     return DenseElementResult::Success;
 }
@@ -420,7 +281,7 @@ GetBoxedOrUnboxedCapacity(JSObject* obj)
 {
     if (Type == JSVAL_TYPE_MAGIC)
         return obj->as<NativeObject>().getDenseCapacity();
-    return obj->as<UnboxedArrayObject>().capacity();
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -429,7 +290,7 @@ GetBoxedOrUnboxedDenseElement(JSObject* obj, size_t index)
 {
     if (Type == JSVAL_TYPE_MAGIC)
         return obj->as<NativeObject>().getDenseElement(index);
-    return obj->as<UnboxedArrayObject>().getElementSpecific<Type>(index);
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -439,7 +300,7 @@ SetBoxedOrUnboxedDenseElementNoTypeChange(JSObject* obj, size_t index, const Val
     if (Type == JSVAL_TYPE_MAGIC)
         obj->as<NativeObject>().setDenseElement(index, value);
     else
-        obj->as<UnboxedArrayObject>().setElementNoTypeChangeSpecific<Type>(index, value);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -450,7 +311,7 @@ SetBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, const 
         obj->as<NativeObject>().setDenseElementWithType(cx, index, value);
         return true;
     }
-    return obj->as<UnboxedArrayObject>().setElementSpecific<Type>(cx, index, value);
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -461,10 +322,7 @@ EnsureBoxedOrUnboxedDenseElements(JSContext* cx, JSObject* obj, size_t count)
         if (!obj->as<ArrayObject>().ensureElements(cx, count))
             return DenseElementResult::Failure;
     } else {
-        if (obj->as<UnboxedArrayObject>().capacity() < count) {
-            if (!obj->as<UnboxedArrayObject>().growElements(cx, count))
-                return DenseElementResult::Failure;
-        }
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
     return DenseElementResult::Success;
 }
@@ -505,55 +363,7 @@ SetOrExtendBoxedOrUnboxedDenseElements(ExclusiveContext* cx, JSObject* obj,
         return DenseElementResult::Success;
     }
 
-    UnboxedArrayObject* nobj = &obj->as<UnboxedArrayObject>();
-
-    if (start > nobj->initializedLength())
-        return DenseElementResult::Incomplete;
-
-    if (start + count >= UnboxedArrayObject::MaximumCapacity)
-        return DenseElementResult::Incomplete;
-
-    if (start + count > nobj->capacity() && !nobj->growElements(cx, start + count))
-        return DenseElementResult::Failure;
-
-    size_t oldInitlen = nobj->initializedLength();
-
-    // Overwrite any existing elements covered by the new range. If we fail
-    // after this point due to some incompatible type being written to the
-    // object's elements, afterwards the contents will be different from when
-    // we started. The caller must retry the operation using a generic path,
-    // which will overwrite the already-modified elements as well as the ones
-    // that were left alone.
-    size_t i = 0;
-    if (updateTypes == ShouldUpdateTypes::DontUpdate) {
-        for (size_t j = start; i < count && j < oldInitlen; i++, j++)
-            nobj->setElementNoTypeChangeSpecific<Type>(j, vp[i]);
-    } else {
-        for (size_t j = start; i < count && j < oldInitlen; i++, j++) {
-            if (!nobj->setElementSpecific<Type>(cx, j, vp[i]))
-                return DenseElementResult::Incomplete;
-        }
-    }
-
-    if (i != count) {
-        obj->as<UnboxedArrayObject>().setInitializedLength(start + count);
-        if (updateTypes == ShouldUpdateTypes::DontUpdate) {
-            for (; i < count; i++)
-                nobj->initElementNoTypeChangeSpecific<Type>(start + i, vp[i]);
-        } else {
-            for (; i < count; i++) {
-                if (!nobj->initElementSpecific<Type>(cx, start + i, vp[i])) {
-                    nobj->setInitializedLengthNoBarrier(oldInitlen);
-                    return DenseElementResult::Incomplete;
-                }
-            }
-        }
-    }
-
-    if (start + count >= nobj->length())
-        nobj->setLength(cx, start + count);
-
-    return DenseElementResult::Success;
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 template <JSValueType Type>
@@ -571,22 +381,7 @@ MoveBoxedOrUnboxedDenseElements(JSContext* cx, JSObject* obj, uint32_t dstStart,
             return DenseElementResult::Failure;
         obj->as<NativeObject>().moveDenseElements(dstStart, srcStart, length);
     } else {
-        uint8_t* data = obj->as<UnboxedArrayObject>().elements();
-        size_t elementSize = UnboxedTypeSize(Type);
-
-        if (UnboxedTypeNeedsPreBarrier(Type) &&
-            JS::shadow::Zone::asShadowZone(obj->zone())->needsIncrementalBarrier())
-        {
-            // Trigger pre barriers on any elements we are overwriting. See
-            // NativeObject::moveDenseElements. No post barrier is needed as
-            // only whole cell post barriers are used with unboxed objects.
-            for (size_t i = 0; i < length; i++)
-                obj->as<UnboxedArrayObject>().triggerPreBarrier<Type>(dstStart + i);
-        }
-
-        memmove(data + dstStart * elementSize,
-                data + srcStart * elementSize,
-                length * elementSize);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     return DenseElementResult::Success;
@@ -615,31 +410,8 @@ CopyBoxedOrUnboxedDenseElements(JSContext* cx, JSObject* dst, JSObject* src,
                 dst->as<NativeObject>().initDenseElement(dstStart + i, v);
             }
         }
-    } else if (DstType == SrcType) {
-        uint8_t* dstData = dst->as<UnboxedArrayObject>().elements();
-        uint8_t* srcData = src->as<UnboxedArrayObject>().elements();
-        size_t elementSize = UnboxedTypeSize(DstType);
-
-        memcpy(dstData + dstStart * elementSize,
-               srcData + srcStart * elementSize,
-               length * elementSize);
-
-        // Add a store buffer entry if we might have copied a nursery pointer to dst.
-        if (UnboxedTypeNeedsPostBarrier(DstType) && !IsInsideNursery(dst))
-            dst->runtimeFromMainThread()->gc.storeBuffer.putWholeCell(dst);
-    } else if (DstType == JSVAL_TYPE_DOUBLE && SrcType == JSVAL_TYPE_INT32) {
-        uint8_t* dstData = dst->as<UnboxedArrayObject>().elements();
-        uint8_t* srcData = src->as<UnboxedArrayObject>().elements();
-
-        for (size_t i = 0; i < length; i++) {
-            int32_t v = *reinterpret_cast<int32_t*>(srcData + (srcStart + i) * sizeof(int32_t));
-            *reinterpret_cast<double*>(dstData + (dstStart + i) * sizeof(double)) = v;
-        }
     } else {
-        for (size_t i = 0; i < length; i++) {
-            Value v = GetBoxedOrUnboxedDenseElement<SrcType>(src, srcStart + i);
-            dst->as<UnboxedArrayObject>().initElementNoTypeChangeSpecific<DstType>(dstStart + i, v);
-        }
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     return DenseElementResult::Success;

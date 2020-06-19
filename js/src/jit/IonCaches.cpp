@@ -639,9 +639,6 @@ TestMatchingReceiver(MacroAssembler& masm, IonCache::StubAttacher& attacher,
         } else {
             masm.branchPtr(Assembler::NotEqual, expandoAddress, ImmWord(0), failure);
         }
-    } else if (obj->is<UnboxedArrayObject>()) {
-        MOZ_ASSERT(failure);
-        masm.branchTestObjGroup(Assembler::NotEqual, object, obj->group(), failure);
     } else if (obj->is<TypedObject>()) {
         attacher.branchNextStubOrLabel(masm, Assembler::NotEqual,
                                        Address(object, JSObject::offsetOfGroup()),
@@ -1193,31 +1190,7 @@ GenerateUnboxedArrayLength(JSContext* cx, MacroAssembler& masm, IonCache::StubAt
                            JSObject* array, Register object, TypedOrValueRegister output,
                            Label* failures)
 {
-    Register outReg;
-    if (output.hasValue()) {
-        outReg = output.valueReg().scratchReg();
-    } else {
-        MOZ_ASSERT(output.type() == MIRType::Int32);
-        outReg = output.typedReg().gpr();
-    }
-    MOZ_ASSERT(object != outReg);
-
-    TestMatchingReceiver(masm, attacher, object, array, failures);
-
-    // Load length.
-    masm.load32(Address(object, UnboxedArrayObject::offsetOfLength()), outReg);
-
-    // Check for a length that fits in an int32.
-    masm.branchTest32(Assembler::Signed, outReg, outReg, failures);
-
-    if (output.hasValue())
-        masm.tagValue(JSVAL_TYPE_INT32, outReg, output.valueReg());
-
-    // Success.
-    attacher.jumpRejoin(masm);
-
     // Failure.
-    masm.bind(failures);
     attacher.jumpNextStub(masm);
 }
 
@@ -1599,33 +1572,8 @@ GetPropertyIC::tryAttachUnboxedArrayLength(JSContext* cx, HandleScript outerScri
                                            HandleObject obj, HandleId id, void* returnAddr,
                                            bool* emitted)
 {
-    MOZ_ASSERT(canAttachStub());
-    MOZ_ASSERT(!*emitted);
-    MOZ_ASSERT(outerScript->ionScript() == ion);
-
-    if (!obj->is<UnboxedArrayObject>())
-        return true;
-
-    if (!JSID_IS_ATOM(id, cx->names().length))
-        return true;
-
-    if (obj->as<UnboxedArrayObject>().length() > INT32_MAX)
-        return true;
-
-    if (!allowArrayLength(cx))
-        return true;
-
-    *emitted = true;
-
-    MacroAssembler masm(cx, ion, outerScript, profilerLeavePc_);
-
-    Label failures;
-    emitIdGuard(masm, id, &failures);
-
-    StubAttacher attacher(*this);
-    GenerateUnboxedArrayLength(cx, masm, attacher, obj, object(), output(), &failures);
-    return linkAndAttachStub(cx, masm, attacher, ion, "unboxed array length",
-                             JS::TrackedOutcome::ICGetPropStub_UnboxedArrayLength);
+    // Stub UnboxedArrayObject
+    return true;
 }
 
 bool
@@ -4026,7 +3974,7 @@ GetPropertyIC::tryAttachDenseElementHole(JSContext* cx, HandleScript outerScript
 GetPropertyIC::canAttachTypedOrUnboxedArrayElement(JSObject* obj, const Value& idval,
                                                    TypedOrValueRegister output)
 {
-    if (!obj->is<TypedArrayObject>() && !obj->is<UnboxedArrayObject>())
+    if (!obj->is<TypedArrayObject>())
         return false;
 
     MOZ_ASSERT(idval.isInt32() || idval.isString());
@@ -4044,24 +3992,13 @@ GetPropertyIC::canAttachTypedOrUnboxedArrayElement(JSObject* obj, const Value& i
             return false;
     }
 
-    if (obj->is<TypedArrayObject>()) {
-        if (index >= obj->as<TypedArrayObject>().length())
-            return false;
-
-        // The output register is not yet specialized as a float register, the only
-        // way to accept float typed arrays for now is to return a Value type.
-        uint32_t arrayType = obj->as<TypedArrayObject>().type();
-        if (arrayType == Scalar::Float32 || arrayType == Scalar::Float64)
-            return output.hasValue();
-
-        return output.hasValue() || !output.typedReg().isFloat();
-    }
-
-    if (index >= obj->as<UnboxedArrayObject>().initializedLength())
+    if (index >= obj->as<TypedArrayObject>().length())
         return false;
 
-    JSValueType elementType = obj->as<UnboxedArrayObject>().elementType();
-    if (elementType == JSVAL_TYPE_DOUBLE)
+    // The output register is not yet specialized as a float register, the only
+    // way to accept float typed arrays for now is to return a Value type.
+    uint32_t arrayType = obj->as<TypedArrayObject>().type();
+    if (arrayType == Scalar::Float32 || arrayType == Scalar::Float64)
         return output.hasValue();
 
     return output.hasValue() || !output.typedReg().isFloat();
@@ -4163,23 +4100,6 @@ GenerateGetTypedOrUnboxedArrayElement(JSContext* cx, MacroAssembler& masm,
         } else {
             masm.loadFromTypedArray(arrayType, source, output.typedReg(), elementReg, &popObjectAndFail);
         }
-    } else {
-        // Save the object register on the stack in case of failure.
-        masm.push(object);
-
-        // Guard on the initialized length.
-        masm.load32(Address(object, UnboxedArrayObject::offsetOfCapacityIndexAndInitializedLength()), object);
-        masm.and32(Imm32(UnboxedArrayObject::InitializedLengthMask), object);
-        masm.branch32(Assembler::BelowOrEqual, object, indexReg, &popObjectAndFail);
-
-        // Load elements vector.
-        Register elementReg = object;
-        masm.loadPtr(Address(masm.getStackPointer(), 0), object);
-        masm.loadPtr(Address(object, UnboxedArrayObject::offsetOfElements()), elementReg);
-
-        JSValueType elementType = array->as<UnboxedArrayObject>().elementType();
-        BaseIndex source(elementReg, indexReg, ScaleFromElemWidth(UnboxedTypeSize(elementType)));
-        masm.loadUnboxedProperty(source, elementType, output);
     }
 
     masm.pop(object);

@@ -60,7 +60,6 @@ namespace jit {
     _(GetElem_UnboxedPropertyName)               \
     _(GetElem_String)                            \
     _(GetElem_Dense)                             \
-    _(GetElem_UnboxedArray)                      \
     _(GetElem_TypedArray)                        \
     _(GetElem_Arguments)                         \
                                                  \

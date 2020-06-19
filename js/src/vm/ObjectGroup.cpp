@@ -900,7 +900,7 @@ GiveObjectGroup(ExclusiveContext* cx, JSObject* source, JSObject* target)
 {
     MOZ_ASSERT(source->group() != target->group());
 
-    if (!target->is<ArrayObject>() && !target->is<UnboxedArrayObject>())
+    if (!target->is<ArrayObject>())
         return true;
 
     if (target->group()->maybePreliminaryObjects()) {
@@ -911,11 +911,7 @@ GiveObjectGroup(ExclusiveContext* cx, JSObject* source, JSObject* target)
     if (target->is<ArrayObject>()) {
         ObjectGroup* sourceGroup = source->group();
 
-        if (source->is<UnboxedArrayObject>()) {
-            Shape* shape = target->as<ArrayObject>().lastProperty();
-            if (!UnboxedArrayObject::convertToNativeWithGroup(cx, source, target->group(), shape))
-                return false;
-        } else if (source->is<ArrayObject>()) {
+        if (source->is<ArrayObject>()) {
             source->setGroup(target->group());
         } else {
             return true;
@@ -932,17 +928,6 @@ GiveObjectGroup(ExclusiveContext* cx, JSObject* source, JSObject* target)
         }
 
         return true;
-    }
-
-    if (target->is<UnboxedArrayObject>()) {
-        if (!source->is<UnboxedArrayObject>())
-            return true;
-        if (source->as<UnboxedArrayObject>().elementType() != JSVAL_TYPE_INT32)
-            return true;
-        if (target->as<UnboxedArrayObject>().elementType() != JSVAL_TYPE_DOUBLE)
-            return true;
-
-        return source->as<UnboxedArrayObject>().convertInt32ToDouble(cx, target->group());
     }
 
     return true;

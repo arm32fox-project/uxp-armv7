@@ -734,10 +734,6 @@ NativeObject::maybeDensifySparseElements(js::ExclusiveContext* cx, HandleNativeO
 //   * minimize the number of unused elements beyond an array's length, and
 //   * provide at least SLOT_CAPACITY_MIN elements no matter what (so adding
 //     the first several elements to small arrays only needs one allocation).
-//
-// Note: the structure and behavior of this method follow along with
-// UnboxedArrayObject::chooseCapacityIndex. Changes to the allocation strategy
-// in one should generally be matched by the other.
 /* static */ bool
 NativeObject::goodElementsAllocationAmount(ExclusiveContext* cx, uint32_t reqCapacity,
                                            uint32_t length, uint32_t* goodAmount)

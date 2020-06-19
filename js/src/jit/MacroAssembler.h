@@ -1626,7 +1626,7 @@ class MacroAssembler : public MacroAssemblerSpecific
     void storeToTypedFloatArray(Scalar::Type arrayType, FloatRegister value, const Address& dest,
                                 unsigned numElems = 0);
 
-    // Load a property from an UnboxedPlainObject or UnboxedArrayObject.
+    // Load a property from an Unboxed Object.
     template <typename T>
     void loadUnboxedProperty(T address, JSValueType type, TypedOrValueRegister output);
 

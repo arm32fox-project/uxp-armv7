@@ -64,7 +64,7 @@ using JS::ToUint32;
 bool
 JS::IsArray(JSContext* cx, HandleObject obj, IsArrayAnswer* answer)
 {
-    if (obj->is<ArrayObject>() || obj->is<UnboxedArrayObject>()) {
+    if (obj->is<ArrayObject>()) {
         *answer = IsArrayAnswer::Array;
         return true;
     }
@@ -97,11 +97,6 @@ js::GetLengthProperty(JSContext* cx, HandleObject obj, uint32_t* lengthp)
 {
     if (obj->is<ArrayObject>()) {
         *lengthp = obj->as<ArrayObject>().length();
-        return true;
-    }
-
-    if (obj->is<UnboxedArrayObject>()) {
-        *lengthp = obj->as<UnboxedArrayObject>().length();
         return true;
     }
 
@@ -398,7 +393,7 @@ SetArrayElement(JSContext* cx, HandleObject obj, double index, HandleValue v)
 {
     MOZ_ASSERT(index >= 0);
 
-    if ((obj->is<ArrayObject>() || obj->is<UnboxedArrayObject>()) && !obj->isIndexed() && index <= UINT32_MAX) {
+    if (obj->is<ArrayObject>() && !obj->isIndexed() && index <= UINT32_MAX) {
         DenseElementResult result =
             SetOrExtendAnyBoxedOrUnboxedDenseElements(cx, obj, uint32_t(index), v.address(), 1);
         if (result != DenseElementResult::Incomplete)
@@ -823,7 +818,7 @@ array_addProperty(JSContext* cx, HandleObject obj, HandleId id, HandleValue v)
 static inline bool
 ObjectMayHaveExtraIndexedOwnProperties(JSObject* obj)
 {
-    return (!obj->isNative() && !obj->is<UnboxedArrayObject>()) ||
+    return !obj->isNative() ||
            obj->isIndexed() ||
            obj->is<TypedArrayObject>() ||
            ClassMayResolveId(*obj->runtimeFromAnyThread()->commonNames,
@@ -1289,10 +1284,6 @@ array_toLocaleString(JSContext* cx, unsigned argc, Value* vp)
         args.rval().setString(cx->names().empty);
         return true;
     }
-    if (obj->is<UnboxedArrayObject>() && obj->as<UnboxedArrayObject>().length() == 0) {
-        args.rval().setString(cx->names().empty);
-        return true;
-    }
 
     AutoCycleDetector detector(cx, obj);
     if (!detector.init())
@@ -1392,11 +1383,7 @@ ArrayReverseDenseKernel(JSContext* cx, HandleObject obj, uint32_t length)
         /* Fill out the array's initialized length to its proper length. */
         obj->as<NativeObject>().ensureDenseInitializedLength(cx, length, 0);
     } else {
-        // Unboxed arrays can only be reversed here if their initialized length
-        // matches their actual length. Otherwise the reversal will place holes
-        // at the beginning of the array, which we don't support.
-        if (length != obj->as<UnboxedArrayObject>().initializedLength())
-            return DenseElementResult::Incomplete;
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     RootedValue origlo(cx), orighi(cx);
@@ -2170,9 +2157,7 @@ ShiftMoveBoxedOrUnboxedDenseElements(JSObject* obj)
     if (Type == JSVAL_TYPE_MAGIC) {
         obj->as<NativeObject>().moveDenseElementsNoPreBarrier(0, 1, initlen);
     } else {
-        uint8_t* data = obj->as<UnboxedArrayObject>().elements();
-        size_t elementSize = UnboxedTypeSize(Type);
-        memmove(data, data + elementSize, initlen * elementSize);
+        MOZ_CRASH("UnboxedArrayObject -- Should not get here");
     }
 
     return DenseElementResult::Success;
@@ -2384,7 +2369,7 @@ CanOptimizeForDenseStorage(HandleObject arr, uint32_t startingIndex, uint32_t co
         return false;
 
     /* There's no optimizing possible if it's not an array. */
-    if (!arr->is<ArrayObject>() && !arr->is<UnboxedArrayObject>())
+    if (!arr->is<ArrayObject>())
         return false;
 
     /* If it's a frozen array, always pick the slow path */
@@ -3612,11 +3597,6 @@ NewArrayTryUseGroup(ExclusiveContext* cx, HandleObjectGroup group, size_t length
         newKind = TenuredObject;
 
     RootedObject proto(cx, group->proto().toObject());
-    if (group->maybeUnboxedLayout()) {
-        if (length > UnboxedArrayObject::MaximumCapacity)
-            return NewArray<maxLength>(cx, length, proto, newKind);
-        return UnboxedArrayObject::create(cx, group, length, newKind, maxLength);
-    }
 
     ArrayObject* res = NewArray<maxLength>(cx, length, proto, newKind);
     if (!res)
@@ -3653,14 +3633,13 @@ js::NewPartlyAllocatedArrayTryUseGroup(ExclusiveContext* cx, HandleObjectGroup g
 // object. The resulting array will either reuse the input object's group or
 // will have unknown property types. Additionally, the result will have the
 // same boxed/unboxed elements representation as the input object, unless
-// |length| is larger than the input object's initialized length (in which case
-// UnboxedArrayObject::MaximumCapacity might be exceeded).
+// |length| is larger than the input object's initialized length.
 template <uint32_t maxLength>
 static inline JSObject*
 NewArrayTryReuseGroup(JSContext* cx, HandleObject obj, size_t length,
                       NewObjectKind newKind = GenericObject)
 {
-    if (!obj->is<ArrayObject>() && !obj->is<UnboxedArrayObject>())
+    if (!obj->is<ArrayObject>())
         return NewArray<maxLength>(cx, length, nullptr, newKind);
 
     if (obj->staticPrototype() != cx->global()->maybeGetArrayPrototype())
@@ -3753,17 +3732,8 @@ js::NewCopiedArrayTryUseGroup(ExclusiveContext* cx, HandleObjectGroup group,
     if (result == DenseElementResult::Success)
         return obj;
 
-    MOZ_ASSERT(obj->is<UnboxedArrayObject>());
-    if (!UnboxedArrayObject::convertToNative(cx->asJSContext(), obj))
-        return nullptr;
-
-    result = SetOrExtendBoxedOrUnboxedDenseElements<JSVAL_TYPE_MAGIC>(cx, obj, 0, vp, length,
-                                                                      updateTypes);
-    MOZ_ASSERT(result != DenseElementResult::Incomplete);
-    if (result == DenseElementResult::Failure)
-        return nullptr;
-
-    return obj;
+    // if we get here it was unboxed
+    MOZ_CRASH("UnboxedArrayObject -- Should not get here");
 }
 
 JSObject*

@@ -787,8 +787,8 @@ BaselineCacheIRCompiler::emitGuardClass()
       case GuardClassKind::Array:
         clasp = &ArrayObject::class_;
         break;
-      case GuardClassKind::UnboxedArray:
-        clasp = &UnboxedArrayObject::class_;
+      case GuardClassKind::UnboxedArray: // XXX Remove
+        clasp = &ArrayObject::class_;
         break;
       case GuardClassKind::MappedArguments:
         clasp = &MappedArgumentsObject::class_;
@@ -1006,6 +1006,8 @@ BaselineCacheIRCompiler::emitLoadInt32ArrayLengthResult()
 bool
 BaselineCacheIRCompiler::emitLoadUnboxedArrayLengthResult()
 {
+    MOZ_CRASH("Not implemented");
+    /*
     Register obj = allocator.useRegister(masm, reader.objOperandId());
     masm.load32(Address(obj, UnboxedArrayObject::offsetOfLength()), R0.scratchReg());
     masm.tagValue(JSVAL_TYPE_INT32, R0.scratchReg(), R0);
@@ -1014,6 +1016,7 @@ BaselineCacheIRCompiler::emitLoadUnboxedArrayLengthResult()
     // just return.
     emitReturnFromIC();
     return true;
+    */
 }
 
 bool
