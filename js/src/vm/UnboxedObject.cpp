@@ -1196,17 +1196,10 @@ js::TryConvertToUnboxedLayout(ExclusiveContext* cx, AutoEnterAnalysis& enter, Sh
 {
     bool isArray = !templateShape;
 
-    // Unboxed arrays are nightly only for now. The getenv() call will be
-    // removed when they are on by default. See bug 1153266.
     if (isArray) {
-#ifdef NIGHTLY_BUILD
-        if (!getenv("JS_OPTION_USE_UNBOXED_ARRAYS")) {
-            if (!cx->options().unboxedArrays())
-                return true;
-        }
-#else
+        // Unboxed arrays are a NOP.
+        // All of this will go away so don't worry about removing unreachable code below.
         return true;
-#endif
     } else {
         if (jit::JitOptions.disableUnboxedObjects)
             return true;

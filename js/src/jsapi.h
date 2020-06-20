@@ -1173,12 +1173,6 @@ class JS_PUBLIC_API(ContextOptions) {
         return *this;
     }
 
-    bool unboxedArrays() const { return unboxedArrays_; }
-    ContextOptions& setUnboxedArrays(bool flag) {
-        unboxedArrays_ = flag;
-        return *this;
-    }
-
     bool asyncStack() const { return asyncStack_; }
     ContextOptions& setAsyncStack(bool flag) {
         asyncStack_ = flag;

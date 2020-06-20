@@ -317,7 +317,6 @@ static bool enableIon = false;
 static bool enableAsmJS = false;
 static bool enableWasm = false;
 static bool enableNativeRegExp = false;
-static bool enableUnboxedArrays = false;
 static bool enableSharedMemory = SHARED_MEMORY_DEFAULT;
 static bool enableWasmAlwaysBaseline = false;
 static bool enableArrayProtoValues = true;
@@ -7263,7 +7262,6 @@ SetContextOptions(JSContext* cx, const OptionParser& op)
     enableAsmJS = !op.getBoolOption("no-asmjs");
     enableWasm = !op.getBoolOption("no-wasm");
     enableNativeRegExp = !op.getBoolOption("no-native-regexp");
-    enableUnboxedArrays = op.getBoolOption("unboxed-arrays");
     enableWasmAlwaysBaseline = op.getBoolOption("wasm-always-baseline");
     enableArrayProtoValues = !op.getBoolOption("no-array-proto-values");
 
@@ -7273,7 +7271,6 @@ SetContextOptions(JSContext* cx, const OptionParser& op)
                              .setWasm(enableWasm)
                              .setWasmAlwaysBaseline(enableWasmAlwaysBaseline)
                              .setNativeRegExp(enableNativeRegExp)
-                             .setUnboxedArrays(enableUnboxedArrays)
                              .setArrayProtoValues(enableArrayProtoValues);
 
     if (op.getBoolOption("wasm-check-bce"))
@@ -7545,7 +7542,6 @@ SetWorkerContextOptions(JSContext* cx)
                              .setWasm(enableWasm)
                              .setWasmAlwaysBaseline(enableWasmAlwaysBaseline)
                              .setNativeRegExp(enableNativeRegExp)
-                             .setUnboxedArrays(enableUnboxedArrays)
                              .setArrayProtoValues(enableArrayProtoValues);
     cx->setOffthreadIonCompilationEnabled(offthreadCompilation);
     cx->profilingScripts = enableCodeCoverage || enableDisassemblyDumps;
@@ -7716,7 +7712,6 @@ main(int argc, char** argv, char** envp)
         || !op.addBoolOption('\0', "no-wasm", "Disable WebAssembly compilation")
         || !op.addBoolOption('\0', "no-native-regexp", "Disable native regexp compilation")
         || !op.addBoolOption('\0', "no-unboxed-objects", "Disable creating unboxed plain objects")
-        || !op.addBoolOption('\0', "unboxed-arrays", "Allow creating unboxed arrays")
         || !op.addBoolOption('\0', "wasm-always-baseline", "Enable wasm baseline compiler when possible")
         || !op.addBoolOption('\0', "wasm-check-bce", "Always generate wasm bounds check, even redundant ones.")
         || !op.addBoolOption('\0', "no-array-proto-values", "Remove Array.prototype.values")

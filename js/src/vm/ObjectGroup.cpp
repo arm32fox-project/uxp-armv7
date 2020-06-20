@@ -1491,18 +1491,6 @@ ObjectGroup::allocationSiteGroup(JSContext* cx, JSScript* scriptArg, jsbytecode*
         }
     }
 
-    if (kind == JSProto_Array &&
-        (JSOp(*pc) == JSOP_NEWARRAY || IsCallPC(pc)) &&
-        cx->options().unboxedArrays())
-    {
-        PreliminaryObjectArrayWithTemplate* preliminaryObjects =
-            cx->new_<PreliminaryObjectArrayWithTemplate>(nullptr);
-        if (preliminaryObjects)
-            res->setPreliminaryObjects(preliminaryObjects);
-        else
-            cx->recoverFromOutOfMemory();
-    }
-
     if (!table->add(p, key, res)) {
         ReportOutOfMemory(cx);
         return nullptr;
