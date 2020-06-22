@@ -173,31 +173,6 @@ UnboxedPlainObject::layout() const
 }
 
 /////////////////////////////////////////////////////////////////////
-// Combined methods for NativeObject and UnboxedArrayObject accesses.
-/////////////////////////////////////////////////////////////////////
-
-static inline void
-SetAnyBoxedOrUnboxedArrayLength(JSContext* cx, JSObject* obj, size_t length)
-{
-    MOZ_ASSERT(length >= obj->as<ArrayObject>().length());
-    obj->as<ArrayObject>().setLength(cx, length);
-}
-
-static inline bool
-SetAnyBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, const Value& value)
-{
-    obj->as<NativeObject>().setDenseElementWithType(cx, index, value);
-    return true;
-}
-
-static inline bool
-InitAnyBoxedOrUnboxedDenseElement(JSContext* cx, JSObject* obj, size_t index, const Value& value)
-{
-    obj->as<NativeObject>().initDenseElementWithType(cx, index, value);
-    return true;
-}
-
-/////////////////////////////////////////////////////////////////////
 // Template methods for NativeObject and UnboxedArrayObject accesses.
 /////////////////////////////////////////////////////////////////////
 

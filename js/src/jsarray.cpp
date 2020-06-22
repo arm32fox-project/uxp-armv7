@@ -2888,7 +2888,8 @@ ArraySliceOrdinary(JSContext* cx, HandleObject obj, uint32_t length, uint32_t be
         RootedObject narr(cx, NewFullyAllocatedArrayTryReuseGroup(cx, obj, count));
         if (!narr)
             return false;
-        SetAnyBoxedOrUnboxedArrayLength(cx, narr, end - begin);
+        MOZ_ASSERT((end - begin) >= narr->as<ArrayObject>().length());
+        narr->as<ArrayObject>().setLength(cx, end - begin);
 
         if (count) {
             DebugOnly<DenseElementResult> result =
@@ -3039,7 +3040,8 @@ ArraySliceDenseKernel(JSContext* cx, JSObject* obj, int32_t beginArg, int32_t en
         }
     }
 
-    SetAnyBoxedOrUnboxedArrayLength(cx, result, end - begin);
+    MOZ_ASSERT((end - begin) >= result->as<ArrayObject>().length());
+    result->as<ArrayObject>().setLength(cx, end - begin);
     return DenseElementResult::Success;
 }
 
