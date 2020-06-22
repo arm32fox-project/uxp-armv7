@@ -327,7 +327,7 @@ ArrayPopDense(JSContext* cx, HandleObject obj, MutableHandleValue rval)
 bool
 ArrayPushDense(JSContext* cx, HandleObject obj, HandleValue v, uint32_t* length)
 {
-    *length = GetAnyBoxedOrUnboxedArrayLength(obj);
+    *length = obj->as<ArrayObject>().length();
     DenseElementResult result =
         SetOrExtendAnyBoxedOrUnboxedDenseElements(cx, obj, *length, v.address(), 1,
                                                   ShouldUpdateTypes::DontUpdate);

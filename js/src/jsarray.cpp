@@ -249,8 +249,11 @@ GetElement(JSContext* cx, HandleObject obj, HandleObject receiver,
            uint32_t index, bool* hole, MutableHandleValue vp)
 {
     AssertGreaterThanZero(index);
-    if (index < GetAnyBoxedOrUnboxedInitializedLength(obj)) {
-        vp.set(GetAnyBoxedOrUnboxedDenseElement(obj, uint32_t(index)));
+    uint32_t initLength = obj->isNative() ? 
+                          obj->as<NativeObject>().getDenseInitializedLength() :
+                          0;
+    if (index < initLength) {
+        vp.set(obj->as<NativeObject>().getDenseElement(index));
         if (!vp.isMagic(JS_ELEMENTS_HOLE)) {
             *hole = false;
             return true;
@@ -849,7 +852,10 @@ js::ObjectMayHaveExtraIndexedProperties(JSObject* obj)
 
         if (ObjectMayHaveExtraIndexedOwnProperties(obj))
             return true;
-        if (GetAnyBoxedOrUnboxedInitializedLength(obj) != 0)
+        uint32_t initLength = obj->isNative() ? 
+                              obj->as<NativeObject>().getDenseInitializedLength() :
+                              0;
+        if (initLength != 0)
             return true;
     } while (true);
 }
@@ -1208,8 +1214,11 @@ js::array_join(JSContext* cx, unsigned argc, Value* vp)
     // An optimized version of a special case of steps 7-11: when length==1 and
     // the 0th element is a string, ToString() of that element is a no-op and
     // so it can be immediately returned as the result.
-    if (length == 1 && GetAnyBoxedOrUnboxedInitializedLength(obj) == 1) {
-        Value elem0 = GetAnyBoxedOrUnboxedDenseElement(obj, 0);
+    uint32_t initLength = obj->isNative() ? 
+                          obj->as<NativeObject>().getDenseInitializedLength() :
+                          0;
+    if (length == 1 && initLength == 1) {
+        Value elem0 = obj->as<NativeObject>().getDenseElement(0);
         if (elem0.isString()) {
             args.rval().set(elem0);
             return true;
@@ -2404,8 +2413,11 @@ CanOptimizeForDenseStorage(HandleObject arr, uint32_t startingIndex, uint32_t co
      * other indexed properties on the object.  (Note that non-writable length
      * is subsumed by the initializedLength comparison.)
      */
+    uint32_t initLength = arr->isNative() ? 
+                          arr->as<NativeObject>().getDenseInitializedLength() :
+                          0;
     return !ObjectMayHaveExtraIndexedProperties(arr) &&
-           startingIndex + count <= GetAnyBoxedOrUnboxedInitializedLength(arr);
+           startingIndex + count <= initLength;
 }
 
 static inline bool
@@ -2866,7 +2878,9 @@ ArraySliceOrdinary(JSContext* cx, HandleObject obj, uint32_t length, uint32_t be
         begin = end;
 
     if (!ObjectMayHaveExtraIndexedProperties(obj)) {
-        size_t initlen = GetAnyBoxedOrUnboxedInitializedLength(obj);
+        size_t initlen = obj->isNative() ? 
+                         obj->as<NativeObject>().getDenseInitializedLength() :
+                         0;
         size_t count = 0;
         if (initlen > begin)
             count = Min<size_t>(initlen - begin, end - begin);
@@ -3006,7 +3020,7 @@ template <JSValueType Type>
 DenseElementResult
 ArraySliceDenseKernel(JSContext* cx, JSObject* obj, int32_t beginArg, int32_t endArg, JSObject* result)
 {
-    int32_t length = GetAnyBoxedOrUnboxedArrayLength(obj);
+    int32_t length = obj->as<ArrayObject>().length();
 
     uint32_t begin = NormalizeSliceTerm(beginArg, length);
     uint32_t end = NormalizeSliceTerm(endArg, length);

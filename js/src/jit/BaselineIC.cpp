@@ -2388,8 +2388,12 @@ CanOptimizeDenseOrUnboxedArraySetElem(JSObject* obj, uint32_t index,
                                       Shape* oldShape, uint32_t oldCapacity, uint32_t oldInitLength,
                                       bool* isAddingCaseOut, size_t* protoDepthOut)
 {
-    uint32_t initLength = GetAnyBoxedOrUnboxedInitializedLength(obj);
-    uint32_t capacity = GetAnyBoxedOrUnboxedCapacity(obj);
+    uint32_t initLength = obj->isNative() ? 
+                          obj->as<NativeObject>().getDenseInitializedLength() :
+                          0;
+    uint32_t capacity = obj->isNative() ? 
+                        obj->as<NativeObject>().getDenseCapacity() :
+                        0;
 
     *isAddingCaseOut = false;
     *protoDepthOut = 0;
@@ -2478,9 +2482,9 @@ DoSetElemFallback(JSContext* cx, BaselineFrame* frame, ICSetElem_Fallback* stub_
     // Check the old capacity
     uint32_t oldCapacity = 0;
     uint32_t oldInitLength = 0;
-    if (index.isInt32() && index.toInt32() >= 0) {
-        oldCapacity = GetAnyBoxedOrUnboxedCapacity(obj);
-        oldInitLength = GetAnyBoxedOrUnboxedInitializedLength(obj);
+    if (index.isInt32() && index.toInt32() >= 0 && obj->isNative()) {
+        oldCapacity = obj->as<NativeObject>().getDenseCapacity();
+        oldInitLength = obj->as<NativeObject>().getDenseInitializedLength();
     }
 
     if (op == JSOP_INITELEM || op == JSOP_INITHIDDENELEM) {
@@ -5778,7 +5782,7 @@ TryAttachCallStub(JSContext* cx, ICCall_Fallback* stub, HandleScript script, jsb
 static bool
 CopyArray(JSContext* cx, HandleObject obj, MutableHandleValue result)
 {
-    uint32_t length = GetAnyBoxedOrUnboxedArrayLength(obj);
+    uint32_t length = obj->as<ArrayObject>().length();
     JSObject* nobj = NewFullyAllocatedArrayTryReuseGroup(cx, obj, length, TenuredObject);
     if (!nobj)
         return false;
@@ -5820,9 +5824,9 @@ TryAttachStringSplit(JSContext* cx, ICCall_Fallback* stub, HandleScript script,
 
     // Atomize all elements of the array.
     RootedObject arrObj(cx, &arr.toObject());
-    uint32_t initLength = GetAnyBoxedOrUnboxedArrayLength(arrObj);
+    uint32_t initLength = arrObj->as<ArrayObject>().length();
     for (uint32_t i = 0; i < initLength; i++) {
-        JSAtom* str = js::AtomizeString(cx, GetAnyBoxedOrUnboxedDenseElement(arrObj, i).toString());
+        JSAtom* str = js::AtomizeString(cx, arrObj->as<NativeObject>().getDenseElement(i).toString());
         if (!str)
             return false;
 

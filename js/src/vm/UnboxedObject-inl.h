@@ -176,40 +176,6 @@ UnboxedPlainObject::layout() const
 // Combined methods for NativeObject and UnboxedArrayObject accesses.
 /////////////////////////////////////////////////////////////////////
 
-static inline bool
-HasAnyBoxedOrUnboxedDenseElements(JSObject* obj)
-{
-    return obj->isNative();
-}
-
-static inline size_t
-GetAnyBoxedOrUnboxedInitializedLength(JSObject* obj)
-{
-    if (obj->isNative())
-        return obj->as<NativeObject>().getDenseInitializedLength();
-    return 0;
-}
-
-static inline size_t
-GetAnyBoxedOrUnboxedCapacity(JSObject* obj)
-{
-    if (obj->isNative())
-        return obj->as<NativeObject>().getDenseCapacity();
-    return 0;
-}
-
-static inline Value
-GetAnyBoxedOrUnboxedDenseElement(JSObject* obj, size_t index)
-{
-    return obj->as<NativeObject>().getDenseElement(index);
-}
-
-static inline size_t
-GetAnyBoxedOrUnboxedArrayLength(JSObject* obj)
-{
-    return obj->as<ArrayObject>().length();
-}
-
 static inline void
 SetAnyBoxedOrUnboxedArrayLength(JSContext* cx, JSObject* obj, size_t length)
 {
@@ -436,7 +402,7 @@ template <typename F>
 DenseElementResult
 CallBoxedOrUnboxedSpecialization(F f, JSObject* obj)
 {
-    if (!HasAnyBoxedOrUnboxedDenseElements(obj))
+    if (!obj->isNative())
         return DenseElementResult::Incomplete;
     switch (GetBoxedOrUnboxedType(obj)) {
       case JSVAL_TYPE_MAGIC:
@@ -461,7 +427,7 @@ template <typename F>
 DenseElementResult
 CallBoxedOrUnboxedSpecialization(F f, JSObject* obj1, JSObject* obj2)
 {
-    if (!HasAnyBoxedOrUnboxedDenseElements(obj1) || !HasAnyBoxedOrUnboxedDenseElements(obj2))
+    if (!obj1->isNative() || !obj2->isNative())
         return DenseElementResult::Incomplete;
 
 #define SPECIALIZE_OBJ2(TYPE)                                                     \

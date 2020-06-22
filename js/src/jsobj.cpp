@@ -1144,13 +1144,15 @@ GetScriptArrayObjectElements(JSContext* cx, HandleObject obj, MutableHandle<GCVe
     MOZ_ASSERT(obj->is<ArrayObject>());
     MOZ_ASSERT(!obj->isIndexed());
 
-    size_t length = GetAnyBoxedOrUnboxedArrayLength(obj);
+    size_t length = obj->as<ArrayObject>().length();
     if (!values.appendN(MagicValue(JS_ELEMENTS_HOLE), length))
         return false;
 
-    size_t initlen = GetAnyBoxedOrUnboxedInitializedLength(obj);
+    size_t initlen = obj->isNative() ? 
+                     obj->as<NativeObject>().getDenseInitializedLength() :
+                     0;
     for (size_t i = 0; i < initlen; i++)
-        values[i].set(GetAnyBoxedOrUnboxedDenseElement(obj, i));
+        values[i].set(obj->as<NativeObject>().getDenseElement(i));
 
     return true;
 }
