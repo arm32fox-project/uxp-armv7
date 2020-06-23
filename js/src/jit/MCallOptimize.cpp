@@ -533,7 +533,7 @@ IonBuilder::inlineArray(CallInfo& callInfo)
 
     MDefinition* array = current->peek(-1);
     if (callInfo.argc() >= 2) {
-        JSValueType unboxedType = GetBoxedOrUnboxedType(templateObject);
+        JSValueType unboxedType = JSVAL_TYPE_MAGIC;
         for (uint32_t i = 0; i < initLength; i++) {
             if (!alloc().ensureBallast())
                 return InliningStatus_Error;
@@ -1425,7 +1425,7 @@ IonBuilder::inlineConstantStringSplitString(CallInfo& callInfo)
         return InliningStatus_Inlined;
     }
 
-    JSValueType unboxedType = GetBoxedOrUnboxedType(templateObject);
+    JSValueType unboxedType = JSVAL_TYPE_MAGIC;
 
     // Store all values, no need to initialize the length after each as
     // jsop_initelem_array is doing because we do not expect to bailout
