@@ -50,169 +50,163 @@ XPCOMUtils.defineLazyServiceGetter(this,
                                    "@mozilla.org/addon-path-service;1",
                                    "amIAddonPathService");
 
-const nsIFile = Components.Constructor("@mozilla.org/file/local;1", "nsIFile",
+const nsIFile = Components.Constructor("@mozilla.org/file/local;1",
+                                       "nsIFile",
                                        "initWithPath");
 
-const PREF_DB_SCHEMA                  = "extensions.databaseSchema";
-const PREF_INSTALL_CACHE              = "extensions.installCache";
-const PREF_XPI_STATE                  = "extensions.xpiState";
-const PREF_BOOTSTRAP_ADDONS           = "extensions.bootstrappedAddons";
-const PREF_PENDING_OPERATIONS         = "extensions.pendingOperations";
-const PREF_MATCH_OS_LOCALE            = "intl.locale.matchOS";
-const PREF_SELECTED_LOCALE            = "general.useragent.locale";
-const PREF_EM_DSS_ENABLED             = "extensions.dss.enabled";
-const PREF_DSS_SWITCHPENDING          = "extensions.dss.switchPending";
-const PREF_DSS_SKIN_TO_SELECT         = "extensions.lastSelectedSkin";
-const PREF_GENERAL_SKINS_SELECTEDSKIN = "general.skins.selectedSkin";
-const PREF_EM_UPDATE_URL              = "extensions.update.url";
-const PREF_EM_ENABLED_ADDONS          = "extensions.enabledAddons";
-const PREF_EM_EXTENSION_FORMAT        = "extensions.";
-const PREF_EM_ENABLED_SCOPES          = "extensions.enabledScopes";
-const PREF_EM_AUTO_DISABLED_SCOPES    = "extensions.autoDisableScopes";
-const PREF_EM_SHOW_MISMATCH_UI        = "extensions.showMismatchUI";
-const PREF_XPI_ENABLED                = "xpinstall.enabled";
-const PREF_XPI_WHITELIST_REQUIRED     = "xpinstall.whitelist.required";
-const PREF_XPI_DIRECT_WHITELISTED     = "xpinstall.whitelist.directRequest";
-const PREF_XPI_FILE_WHITELISTED       = "xpinstall.whitelist.fileRequest";
-const PREF_XPI_PERMISSIONS_BRANCH     = "xpinstall.";
-const PREF_XPI_UNPACK                 = "extensions.alwaysUnpack";
-const PREF_INSTALL_REQUIREBUILTINCERTS = "extensions.install.requireBuiltInCerts";
-const PREF_INSTALL_REQUIRESECUREORIGIN = "extensions.install.requireSecureOrigin";
-const PREF_INSTALL_DISTRO_ADDONS      = "extensions.installDistroAddons";
-const PREF_BRANCH_INSTALLED_ADDON     = "extensions.installedDistroAddon.";
-const PREF_SHOWN_SELECTION_UI         = "extensions.shownSelectionUI";
-const PREF_INTERPOSITION_ENABLED      = "extensions.interposition.enabled";
+const PREF_DB_SCHEMA                      = "extensions.databaseSchema";
+const PREF_INSTALL_CACHE                  = "extensions.installCache";
+const PREF_XPI_STATE                      = "extensions.xpiState";
+const PREF_BOOTSTRAP_ADDONS               = "extensions.bootstrappedAddons";
+const PREF_PENDING_OPERATIONS             = "extensions.pendingOperations";
+const PREF_MATCH_OS_LOCALE                = "intl.locale.matchOS";
+const PREF_SELECTED_LOCALE                = "general.useragent.locale";
+const PREF_EM_DSS_ENABLED                 = "extensions.dss.enabled";
+const PREF_DSS_SWITCHPENDING              = "extensions.dss.switchPending";
+const PREF_DSS_SKIN_TO_SELECT             = "extensions.lastSelectedSkin";
+const PREF_GENERAL_SKINS_SELECTEDSKIN     = "general.skins.selectedSkin";
+const PREF_EM_UPDATE_URL                  = "extensions.update.url";
+const PREF_EM_ENABLED_ADDONS              = "extensions.enabledAddons";
+const PREF_EM_EXTENSION_FORMAT            = "extensions.";
+const PREF_EM_ENABLED_SCOPES              = "extensions.enabledScopes";
+const PREF_EM_AUTO_DISABLED_SCOPES        = "extensions.autoDisableScopes";
+const PREF_EM_SHOW_MISMATCH_UI            = "extensions.showMismatchUI";
+const PREF_XPI_ENABLED                    = "xpinstall.enabled";
+const PREF_XPI_WHITELIST_REQUIRED         = "xpinstall.whitelist.required";
+const PREF_XPI_DIRECT_WHITELISTED         = "xpinstall.whitelist.directRequest";
+const PREF_XPI_FILE_WHITELISTED           = "xpinstall.whitelist.fileRequest";
+const PREF_XPI_PERMISSIONS_BRANCH         = "xpinstall.";
+const PREF_XPI_UNPACK                     = "extensions.alwaysUnpack";
+const PREF_INSTALL_REQUIREBUILTINCERTS    = "extensions.install.requireBuiltInCerts";
+const PREF_INSTALL_REQUIRESECUREORIGIN    = "extensions.install.requireSecureOrigin";
+const PREF_INSTALL_DISTRO_ADDONS          = "extensions.installDistroAddons";
+const PREF_BRANCH_INSTALLED_ADDON         = "extensions.installedDistroAddon.";
+const PREF_SHOWN_SELECTION_UI             = "extensions.shownSelectionUI";
+const PREF_INTERPOSITION_ENABLED          = "extensions.interposition.enabled";
 
 const PREF_EM_MIN_COMPAT_APP_VERSION      = "extensions.minCompatibleAppVersion";
 const PREF_EM_MIN_COMPAT_PLATFORM_VERSION = "extensions.minCompatiblePlatformVersion";
 
-const URI_EXTENSION_SELECT_DIALOG     = "chrome://mozapps/content/extensions/selectAddons.xul";
-const URI_EXTENSION_UPDATE_DIALOG     = "chrome://mozapps/content/extensions/update.xul";
-const URI_EXTENSION_STRINGS           = "chrome://mozapps/locale/extensions/extensions.properties";
+const URI_EXTENSION_SELECT_DIALOG         = "chrome://mozapps/content/extensions/selectAddons.xul";
+const URI_EXTENSION_UPDATE_DIALOG         = "chrome://mozapps/content/extensions/update.xul";
+const URI_EXTENSION_STRINGS               = "chrome://mozapps/locale/extensions/extensions.properties";
 
-const STRING_TYPE_NAME                = "type.%ID%.name";
+const STRING_TYPE_NAME                    = "type.%ID%.name";
 
-const DIR_EXTENSIONS                  = "extensions";
-const DIR_STAGE                       = "staged";
-const DIR_XPI_STAGE                   = "staged-xpis";
-const DIR_TRASH                       = "trash";
+const DIR_EXTENSIONS                      = "extensions";
+const DIR_STAGE                           = "staged";
+const DIR_XPI_STAGE                       = "staged-xpis";
+const DIR_TRASH                           = "trash";
 
-const FILE_DATABASE                   = "extensions.json";
-const FILE_OLD_CACHE                  = "extensions.cache";
-const FILE_XPI_ADDONS_LIST            = "extensions.ini";
-const FILE_RDF_INSTALL_MANIFEST       = "install.rdf";
+const FILE_DATABASE                       = "extensions.json";
+const FILE_OLD_CACHE                      = "extensions.cache";
+const FILE_XPI_ADDONS_LIST                = "extensions.ini";
+const FILE_RDF_INSTALL_MANIFEST           = "install.rdf";
 #ifndef MOZ_JETPACK
-const FILE_CFX_JETPACK_MANIFEST       = "harness-options.json";
-const FILE_NPM_JETPACK_MANIFEST       = "package.json";
+const FILE_CFX_JETPACK_MANIFEST           = "harness-options.json";
+const FILE_NPM_JETPACK_MANIFEST           = "package.json";
 #endif
-const FILE_WEBEXTENSION_MANIFEST      = "manifest.json";
+const FILE_WEBEXTENSION_MANIFEST          = "manifest.json";
 
-const KEY_PROFILEDIR                  = "ProfD";
-const KEY_APPDIR                      = "XCurProcD";
-const KEY_TEMPDIR                     = "TmpD";
-const KEY_APP_DISTRIBUTION            = "XREAppDist";
+const KEY_PROFILEDIR                      = "ProfD";
+const KEY_APPDIR                          = "XCurProcD";
+const KEY_TEMPDIR                         = "TmpD";
+const KEY_APP_DISTRIBUTION                = "XREAppDist";
 
-const KEY_APP_PROFILE                 = "app-profile";
-const KEY_APP_GLOBAL                  = "app-global";
-const KEY_APP_SYSTEM_LOCAL            = "app-system-local";
-const KEY_APP_SYSTEM_SHARE            = "app-system-share";
-const KEY_APP_SYSTEM_USER             = "app-system-user";
+const KEY_APP_PROFILE                     = "app-profile";
+const KEY_APP_GLOBAL                      = "app-global";
+const KEY_APP_SYSTEM_LOCAL                = "app-system-local";
+const KEY_APP_SYSTEM_SHARE                = "app-system-share";
+const KEY_APP_SYSTEM_USER                 = "app-system-user";
 
-const NOTIFICATION_FLUSH_PERMISSIONS  = "flush-pending-permissions";
-const XPI_PERMISSION                  = "install";
+const NOTIFICATION_FLUSH_PERMISSIONS      = "flush-pending-permissions";
+const XPI_PERMISSION                      = "install";
 
-const RDFURI_INSTALL_MANIFEST_ROOT    = "urn:mozilla:install-manifest";
-const PREFIX_NS_EM                    = "http://www.mozilla.org/2004/em-rdf#";
+const RDFURI_INSTALL_MANIFEST_ROOT        = "urn:mozilla:install-manifest";
+const PREFIX_NS_EM                        = "http://www.mozilla.org/2004/em-rdf#";
 
-const TOOLKIT_ID                      = "toolkit@mozilla.org";
+const TOOLKIT_ID                          = "toolkit@mozilla.org";
 #ifdef MOZ_PHOENIX_EXTENSIONS
-const FIREFOX_ID                      = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"
-const FIREFOX_APPCOMPATVERSION        = "56.9"
+const FIREFOX_ID                          = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"
+const FIREFOX_APPCOMPATVERSION            = "56.9"
 #endif
 
 // The value for this is in Makefile.in
 #expand const DB_SCHEMA                       = __MOZ_EXTENSIONS_DB_SCHEMA__;
 XPCOMUtils.defineConstant(this, "DB_SCHEMA", DB_SCHEMA);
 #ifdef MOZ_DEVTOOLS
-const NOTIFICATION_TOOLBOXPROCESS_LOADED      = "ToolboxProcessLoaded";
+const NOTIFICATION_TOOLBOXPROCESS_LOADED  = "ToolboxProcessLoaded";
 #endif
 
 // Properties that exist in the install manifest
-const PROP_METADATA      = ["id", "version", "type", "internalName", "updateURL",
-                            "updateKey", "optionsURL", "optionsType", "aboutURL",
-                            "iconURL", "icon64URL"];
-const PROP_LOCALE_SINGLE = ["name", "description", "creator", "homepageURL"];
-const PROP_LOCALE_MULTI  = ["developers", "translators", "contributors"];
-const PROP_TARGETAPP     = ["id", "minVersion", "maxVersion"];
+const PROP_METADATA                       = ["id", "version", "type", "internalName", "updateURL",
+                                             "updateKey", "optionsURL", "optionsType", "aboutURL",
+                                             "iconURL", "icon64URL"];
+const PROP_LOCALE_SINGLE                  = ["name", "description", "creator", "homepageURL"];
+const PROP_LOCALE_MULTI                   = ["developers", "translators", "contributors"];
+const PROP_TARGETAPP                      = ["id", "minVersion", "maxVersion"];
 
 // Properties that should be migrated where possible from an old database. These
 // shouldn't include properties that can be read directly from install.rdf files
 // or calculated
-const DB_MIGRATE_METADATA= ["installDate", "userDisabled", "softDisabled",
-                            "sourceURI", "applyBackgroundUpdates",
-                            "releaseNotesURI", "foreignInstall", "syncGUID"];
+const DB_MIGRATE_METADATA                 = ["installDate", "userDisabled", "softDisabled",
+                                             "sourceURI", "applyBackgroundUpdates",
+                                             "releaseNotesURI", "foreignInstall", "syncGUID"];
 // Properties to cache and reload when an addon installation is pending
-const PENDING_INSTALL_METADATA =
-    ["syncGUID", "targetApplications", "userDisabled", "softDisabled",
-     "existingAddonID", "sourceURI", "releaseNotesURI", "installDate",
-     "updateDate", "applyBackgroundUpdates", "compatibilityOverrides"];
+const PENDING_INSTALL_METADATA            = ["syncGUID", "targetApplications", "userDisabled", "softDisabled",
+                                             "existingAddonID", "sourceURI", "releaseNotesURI", "installDate",
+                                             "updateDate", "applyBackgroundUpdates", "compatibilityOverrides"];
 
 // Note: When adding/changing/removing items here, remember to change the
 // DB schema version to ensure changes are picked up ASAP.
-const STATIC_BLOCKLIST_PATTERNS = [
-  { creator: "Mozilla Corp.",
-    level: Blocklist.STATE_BLOCKED,
-    blockID: "i162" },
-  { creator: "Mozilla.org",
-    level: Blocklist.STATE_BLOCKED,
-    blockID: "i162" }
-];
+const STATIC_BLOCKLIST_PATTERNS           = [
+                                              { creator:        "Mozilla Corp.",
+                                                level:          Blocklist.STATE_BLOCKED,
+                                                blockID:        "i162" },
+                                              { creator:        "Mozilla.org",
+                                                level:          Blocklist.STATE_BLOCKED,
+                                                blockID:        "i162" }
+                                            ];
 
 
-const BOOTSTRAP_REASONS = {
-  APP_STARTUP     : 1,
-  APP_SHUTDOWN    : 2,
-  ADDON_ENABLE    : 3,
-  ADDON_DISABLE   : 4,
-  ADDON_INSTALL   : 5,
-  ADDON_UNINSTALL : 6,
-  ADDON_UPGRADE   : 7,
-  ADDON_DOWNGRADE : 8
-};
+const BOOTSTRAP_REASONS                   = { APP_STARTUP:      1,
+                                              APP_SHUTDOWN:     2,
+                                              ADDON_ENABLE:     3,
+                                              ADDON_DISABLE:    4,
+                                              ADDON_INSTALL:    5,
+                                              ADDON_UNINSTALL:  6,
+                                              ADDON_UPGRADE:    7,
+                                              ADDON_DOWNGRADE:  8 };
 
 // Map new string type identifiers to old style nsIUpdateItem types
-const TYPES = {
-  extension: 2,
-  theme: 4,
-  locale: 8,
-  multipackage: 32,
-  dictionary: 64,
-  experiment: 128,
-};
+const TYPES                               = { extension:        2,
+                                              theme:            4,
+                                              locale:           8,
+                                              multipackage:     32,
+                                              dictionary:       64,
+                                              experiment:       128 };
 
-const RESTARTLESS_TYPES = new Set([
-  "dictionary",
-  "experiment",
-  "locale",
-]);
+const RESTARTLESS_TYPES                   = new Set([
+                                                      "dictionary",
+                                                      "experiment",
+                                                      "locale",
+                                                    ]);
 
 // Keep track of where we are in startup for telemetry
 // event happened during XPIDatabase.startup()
-const XPI_STARTING = "XPIStarting";
+const XPI_STARTING                        = "XPIStarting";
 // event happened after startup() but before the final-ui-startup event
-const XPI_BEFORE_UI_STARTUP = "BeforeFinalUIStartup";
+const XPI_BEFORE_UI_STARTUP               = "BeforeFinalUIStartup";
 // event happened after final-ui-startup
-const XPI_AFTER_UI_STARTUP = "AfterFinalUIStartup";
+const XPI_AFTER_UI_STARTUP                = "AfterFinalUIStartup";
 
-const COMPATIBLE_BY_DEFAULT_TYPES = {
-  extension: true,
-  dictionary: true
-};
+const COMPATIBLE_BY_DEFAULT_TYPES = { extension:                true,
+                                      dictionary:               true };
 
-const MSG_JAR_FLUSH = "AddonJarFlush";
-const MSG_MESSAGE_MANAGER_CACHES_FLUSH = "AddonMessageManagerCachesFlush";
+const MSG_JAR_FLUSH                       = "AddonJarFlush";
+const MSG_MM_CACHES_FLUSH                 = "AddonMessageManagerCachesFlush";
 
-var gGlobalScope = this;
+var gGlobalScope                          = this;
 
 /**
  * Valid IDs fit this pattern.
@@ -1199,7 +1193,7 @@ function flushChromeCaches() {
   // Flush message manager cached scripts
   Services.obs.notifyObservers(null, "message-manager-flush-caches", null);
   // Also dispatch this event to child processes
-  Services.mm.broadcastAsyncMessage(MSG_MESSAGE_MANAGER_CACHES_FLUSH, null);
+  Services.mm.broadcastAsyncMessage(MSG_MM_CACHES_FLUSH, null);
 }
 
 /**
