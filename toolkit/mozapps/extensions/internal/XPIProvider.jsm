@@ -108,13 +108,13 @@ const DIR_TRASH                       = "trash";
 
 const FILE_DATABASE                   = "extensions.json";
 const FILE_OLD_CACHE                  = "extensions.cache";
-const FILE_INSTALL_MANIFEST           = "install.rdf";
-#ifndef MOZ_JETPACK
-const FILE_JETPACK_MANIFEST_1         = "harness-options.json";
-const FILE_JETPACK_MANIFEST_2         = "package.json";
-#endif
-const FILE_WEBEXT_MANIFEST            = "manifest.json";
 const FILE_XPI_ADDONS_LIST            = "extensions.ini";
+const FILE_RDF_INSTALL_MANIFEST       = "install.rdf";
+#ifndef MOZ_JETPACK
+const FILE_CFX_JETPACK_MANIFEST       = "harness-options.json";
+const FILE_NPM_JETPACK_MANIFEST       = "package.json";
+#endif
+const FILE_WEBEXTENSION_MANIFEST      = "manifest.json";
 
 const KEY_PROFILEDIR                  = "ProfD";
 const KEY_APPDIR                      = "XCurProcD";
@@ -1015,7 +1015,7 @@ function loadManifestFromDir(aDir) {
   }
 
   let file = aDir.clone();
-  file.append(FILE_INSTALL_MANIFEST);
+  file.append(FILE_RDF_INSTALL_MANIFEST);
   if (!file.exists() || !file.isFile())
     throw new Error("Directory " + aDir.path + " does not contain a valid " +
                     "install manifest");
@@ -1061,8 +1061,8 @@ function loadManifestFromDir(aDir) {
  */
 function loadManifestFromZipReader(aZipReader) {
   // If WebExtension but not install.rdf throw an error
-  if (aZipReader.hasEntry(FILE_WEBEXT_MANIFEST)) {
-    if (!aZipReader.hasEntry(FILE_INSTALL_MANIFEST)) {
+  if (aZipReader.hasEntry(FILE_WEBEXTENSION_MANIFEST)) {
+    if (!aZipReader.hasEntry(FILE_RDF_INSTALL_MANIFEST)) {
       throw {
         name: "UnsupportedExtension",
         message: Services.appinfo.name + " does not support WebExtensions",
@@ -1073,8 +1073,8 @@ function loadManifestFromZipReader(aZipReader) {
 
 #ifndef MOZ_JETPACK
   // If Jetpack is not built throw an error
-  if (aZipReader.hasEntry(FILE_JETPACK_MANIFEST_1) ||
-      aZipReader.hasEntry(FILE_JETPACK_MANIFEST_2)) {
+  if (aZipReader.hasEntry(FILE_CFX_JETPACK_MANIFEST) ||
+      aZipReader.hasEntry(FILE_NPM_JETPACK_MANIFEST)) {
     throw {
       name: "UnsupportedExtension",
       message: Services.appinfo.name + " does not support Jetpack Extensions",
@@ -1084,14 +1084,14 @@ function loadManifestFromZipReader(aZipReader) {
 #endif
  
   // Attempt to open install.rdf else throw normally
-  let zis = aZipReader.getInputStream(FILE_INSTALL_MANIFEST);
+  let zis = aZipReader.getInputStream(FILE_RDF_INSTALL_MANIFEST);
   // Create a buffered input stream for install.rdf
   let bis = Cc["@mozilla.org/network/buffered-input-stream;1"].
             createInstance(Ci.nsIBufferedInputStream);
   bis.init(zis, 4096);
 
   try {
-    let uri = buildJarURI(aZipReader.file, FILE_INSTALL_MANIFEST);
+    let uri = buildJarURI(aZipReader.file, FILE_RDF_INSTALL_MANIFEST);
     let addon = loadManifestFromRDF(uri, bis);
     addon._sourceBundle = aZipReader.file;
 
@@ -1533,7 +1533,7 @@ XPIState.prototype = {
       // XXX This will eventually also need to check for package.json or whatever
       // the new manifest is named.
       let maniFile = aFile.clone();
-      maniFile.append(FILE_INSTALL_MANIFEST);
+      maniFile.append(FILE_RDF_INSTALL_MANIFEST);
       if (!(aId in XPIProvider._mostRecentlyModifiedFile)) {
         XPIProvider._mostRecentlyModifiedFile[aId] = maniFile.leafName;
       }
@@ -2571,7 +2571,7 @@ this.XPIProvider = {
         if (isDir) {
           // Check if the directory contains an install manifest.
           let manifest = stageDirEntry.clone();
-          manifest.append(FILE_INSTALL_MANIFEST);
+          manifest.append(FILE_RDF_INSTALL_MANIFEST);
 
           // If the install manifest doesn't exist uninstall this add-on in this
           // install location.
