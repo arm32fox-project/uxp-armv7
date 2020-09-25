@@ -16,34 +16,25 @@ Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/AddonManager.jsm");
 Components.utils.import("resource://gre/modules/Preferences.jsm");
 
-XPCOMUtils.defineLazyModuleGetter(this, "AddonRepository",
-                                  "resource://gre/modules/addons/AddonRepository.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "ChromeManifestParser",
-                                  "resource://gre/modules/ChromeManifestParser.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "LightweightThemeManager",
-                                  "resource://gre/modules/LightweightThemeManager.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "FileUtils",
-                                  "resource://gre/modules/FileUtils.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "ZipUtils",
-                                  "resource://gre/modules/ZipUtils.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "NetUtil",
-                                  "resource://gre/modules/NetUtil.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "PermissionsUtils",
-                                  "resource://gre/modules/PermissionsUtils.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "Promise",
-                                  "resource://gre/modules/Promise.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "Task",
-                                  "resource://gre/modules/Task.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "OS",
-                                  "resource://gre/modules/osfile.jsm");
+[
+  ["AddonRepository", "resource://gre/modules/addons/AddonRepository.jsm"],
+  ["ChromeManifestParser", "resource://gre/modules/ChromeManifestParser.jsm"],
+  ["LightweightThemeManager", "resource://gre/modules/LightweightThemeManager.jsm"],
+  ["FileUtils", "resource://gre/modules/FileUtils.jsm"],
+  ["ZipUtils", "resource://gre/modules/ZipUtils.jsm"],
+  ["NetUtil", "resource://gre/modules/NetUtil.jsm"],
+  ["PermissionsUtils", "resource://gre/modules/PermissionsUtils.jsm"],
+  ["Promise", "resource://gre/modules/Promise.jsm"],
+  ["Task", "resource://gre/modules/Task.jsm"],
+  ["OS", "resource://gre/modules/osfile.jsm"],
 #ifdef MOZ_DEVTOOLS
-XPCOMUtils.defineLazyModuleGetter(this, "BrowserToolboxProcess",
-                                  "resource://devtools/client/framework/ToolboxProcess.jsm");
+  ["BrowserToolboxProcess", "resource://devtools/client/framework/ToolboxProcess.jsm"],
 #endif
-XPCOMUtils.defineLazyModuleGetter(this, "ConsoleAPI",
-                                  "resource://gre/modules/Console.jsm");
+  ["ConsoleAPI", "resource://gre/modules/Console.jsm"]
+].forEach(([name, resource]) => XPCOMUtils.defineLazyModuleGetter(this, name, resource));
 
-XPCOMUtils.defineLazyServiceGetter(this, "Blocklist",
+XPCOMUtils.defineLazyServiceGetter(this,
+                                   "Blocklist",
                                    "@mozilla.org/extensions/blocklist;1",
                                    Ci.nsIBlocklistService);
 XPCOMUtils.defineLazyServiceGetter(this,
