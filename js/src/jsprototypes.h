@@ -106,23 +106,12 @@ IF_SIMD(real,imaginary)(SIMD,                   44,     InitSimdClass, OCLASP(Si
     real(TypedArray,            46,     InitViaClassSpec,       &js::TypedArrayObject::sharedTypedArrayPrototypeClass) \
 IF_SAB(real,imaginary)(Atomics, 47,     InitAtomicsClass, OCLASP(Atomics)) \
     real(SavedFrame,            48,     InitViaClassSpec,       &js::SavedFrame::class_) \
-    real(Promise,               49,     InitViaClassSpec,       OCLASP(Promise)) \
-    real(ReadableStream,        50,     InitViaClassSpec,       &js::ReadableStream::class_) \
-    real(ReadableStreamDefaultReader,           51,     InitViaClassSpec, &js::ReadableStreamDefaultReader::class_) \
-    real(ReadableStreamBYOBReader,              52,     InitViaClassSpec, &js::ReadableStreamBYOBReader::class_) \
-    real(ReadableStreamDefaultController,       53,     InitViaClassSpec, &js::ReadableStreamDefaultController::class_) \
-    real(ReadableByteStreamController,          54,     InitViaClassSpec, &js::ReadableByteStreamController::class_) \
-    real(ReadableStreamBYOBRequest,             55,     InitViaClassSpec, &js::ReadableStreamBYOBRequest::class_) \
-    imaginary(WritableStream,   56,     dummy,                  dummy) \
-    imaginary(WritableStreamDefaultWriter,      57,     dummy,  dummy) \
-    imaginary(WritableStreamDefaultController,  58,     dummy,  dummy) \
-    real(ByteLengthQueuingStrategy,             59,     InitViaClassSpec, &js::ByteLengthQueuingStrategy::class_) \
-    real(CountQueuingStrategy,  60,      InitViaClassSpec,      &js::CountQueuingStrategy::class_) \
-    real(WebAssembly,           61,     InitWebAssemblyClass,   CLASP(WebAssembly)) \
-    imaginary(WasmModule,       62,     dummy,                  dummy) \
-    imaginary(WasmInstance,     63,     dummy,                  dummy) \
-    imaginary(WasmMemory,       64,     dummy,                  dummy) \
-    imaginary(WasmTable,        65,     dummy,                  dummy) \
+    real(WebAssembly,           49,     InitWebAssemblyClass,   CLASP(WebAssembly)) \
+    imaginary(WasmModule,       50,     dummy,                  dummy) \
+    imaginary(WasmInstance,     51,     dummy,                  dummy) \
+    imaginary(WasmMemory,       52,     dummy,                  dummy) \
+    imaginary(WasmTable,        53,     dummy,                  dummy) \
+    real(Promise,               54,     InitViaClassSpec,       OCLASP(Promise)) \
 
 #define JS_FOR_EACH_PROTOTYPE(macro) JS_FOR_PROTOTYPES(macro,macro)
 

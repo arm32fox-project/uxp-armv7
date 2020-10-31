@@ -23,7 +23,6 @@
 */
 
 #include "SelfHostingDefines.h"
-#include "StreamDefines.h"
 #include "TypedObjectConstants.h"
 
 // Assertions and debug printing, defined here instead of in the header above
@@ -95,22 +94,6 @@ function ToBoolean(v) {
 /* Spec: ECMAScript Language Specification, 5.1 edition, 9.3 and 11.4.6 */
 function ToNumber(v) {
     return +v;
-}
-
-// ES2016 7.2.6 IsInteger ( argument )
-function IsInteger(argument) {
-    // Step 1: If Type(argument) is not Number, return false.
-    if (typeof argument !== "number")
-        return false;
-
-    // Step 2: If argument is NaN, +∞, or -∞, return false.
-    if (argument !== argument || argument - argument !== 0)
-        return false;
-
-    // Step 3: If floor(abs(argument)) ≠ abs(argument), return false.
-    // Step 4: Return true.
-    argument = std_Math_abs(argument);
-    return std_Math_floor(argument) === argument;
 }
 
 

@@ -164,7 +164,6 @@
     macro(has, has, "has") \
     macro(hasOwn, hasOwn, "hasOwn") \
     macro(hasOwnProperty, hasOwnProperty, "hasOwnProperty") \
-    macro(highWaterMark, highWaterMark, "highWaterMark") \
     macro(hour, hour, "hour") \
     macro(if, if_, "if") \
     macro(ignoreCase, ignoreCase, "ignoreCase") \
