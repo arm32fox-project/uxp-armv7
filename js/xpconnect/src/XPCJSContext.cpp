@@ -1425,6 +1425,8 @@ ReloadPrefsCallback(const char* pref, void* data)
     bool werror = Preferences::GetBool(JS_OPTIONS_DOT_STR "werror");
 
     bool extraWarnings = Preferences::GetBool(JS_OPTIONS_DOT_STR "strict");
+    
+    bool streams = Preferences::GetBool(JS_OPTIONS_DOT_STR "streams");
 
     bool unboxedObjects = Preferences::GetBool(JS_OPTIONS_DOT_STR "unboxed_objects");
     
@@ -1448,7 +1450,8 @@ ReloadPrefsCallback(const char* pref, void* data)
                              .setDumpStackOnDebuggeeWouldRun(dumpStackOnDebuggeeWouldRun)
                              .setWerror(werror)
                              .setExtraWarnings(extraWarnings)
-                             .setArrayProtoValues(arrayProtoValues);
+                             .setArrayProtoValues(arrayProtoValues)
+                             .setStreams(streams);
 
     JS_SetParallelParsingEnabled(cx, parallelParsing);
     JS_SetOffthreadIonCompilationEnabled(cx, offthreadIonCompilation);
