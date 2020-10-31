@@ -166,6 +166,7 @@ UNIFIED_SOURCES += [
     'builtin/Reflect.cpp',
     'builtin/ReflectParse.cpp',
     'builtin/SIMD.cpp',
+    'builtin/Stream.cpp',
     'builtin/SymbolObject.cpp',
     'builtin/TestingFunctions.cpp',
     'builtin/TypedObject.cpp',
@@ -744,6 +745,7 @@ selfhosted = GENERATED_FILES[('selfhosted.out.h', 'selfhosted.js')]
 selfhosted.script = 'builtin/embedjs.py:generate_selfhosted'
 selfhosted.inputs = [
     'js.msg',
+    'builtin/StreamDefines.h',
     'builtin/TypedObjectConstants.h',
     'builtin/SelfHostingDefines.h',
     'builtin/Utilities.js',
@@ -766,6 +768,7 @@ selfhosted.inputs = [
     'builtin/RegExp.js',
     'builtin/RegExpGlobalReplaceOpt.h.js',
     'builtin/RegExpLocalReplaceOpt.h.js',
+    'builtin/Stream.js',
     'builtin/String.js',
     'builtin/Set.js',
     'builtin/Sorting.js',

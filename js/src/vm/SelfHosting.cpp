@@ -30,6 +30,7 @@
 #include "builtin/Reflect.h"
 #include "builtin/SelfHostingDefines.h"
 #include "builtin/SIMD.h"
+#include "builtin/Stream.h"
 #include "builtin/TypedObject.h"
 #include "builtin/WeakSetObject.h"
 #include "gc/Marking.h"
@@ -64,7 +65,6 @@ using JS::AutoCheckCannotGC;
 using mozilla::IsInRange;
 using mozilla::Maybe;
 using mozilla::PodMove;
-using mozilla::Maybe;
 
 static void
 selfHosting_WarningReporter(JSContext* cx, JSErrorReport* report)
@@ -2256,6 +2256,51 @@ intrinsic_AddPromiseReactions(JSContext* cx, unsigned argc, Value* vp)
     return true;
 }
 
+/**
+ * Implements 2.7.6 Transfer ( input, targetRealm ) from
+ * https://html.spec.whatwg.org/multipage/infrastructure.html
+ *
+ * The targetRealm can be an arbitrary object from the desired global.
+ *
+ * Note: For now, this only handles Typed Arrays and ArrayBuffer instances.
+ */
+static bool
+intrinsic_TransferBuffer(JSContext* cx, unsigned argc, Value* vp)
+{
+    CallArgs args = CallArgsFromVp(argc, vp);
+    MOZ_ASSERT(args.length() == 2);
+
+    RootedObject buffer(cx, &args[0].toObject());
+    MOZ_ASSERT(buffer->is<ArrayBufferObject>());
+    RootedObject realm(cx, &args[1].toObject().global());
+
+    uint32_t size = buffer->as<ArrayBufferObject>().byteLength();
+
+    void* contents = JS_StealArrayBufferContents(cx, buffer);
+    if (!contents)
+        return false;
+
+    RootedObject transferredBuffer(cx);
+    {
+        Maybe<AutoCompartment> ac;
+        if (IsWrapper(realm)) {
+            RootedObject unwrappedRealm(cx, CheckedUnwrap(realm));
+            if (!unwrappedRealm)
+                return false;
+            ac.emplace(cx, unwrappedRealm);
+        }
+
+        transferredBuffer = JS_NewArrayBufferWithContents(cx, size, contents);
+        if (!transferredBuffer)
+            return false;
+    }
+    if (!cx->compartment()->wrap(cx, &transferredBuffer))
+        return false;
+
+    args.rval().setObject(*transferredBuffer);
+    return true;
+}
+
 // The self-hosting global isn't initialized with the normal set of builtins.
 // Instead, individual C++-implemented functions that're required by
 // self-hosted code are defined as global functions. Accessing these
@@ -2547,6 +2592,14 @@ static const JSFunctionSpec intrinsic_functions[] = {
     JS_FN("Promise_static_reject",                 Promise_reject, 1, 0),
     JS_FN("Promise_then",                          Promise_then, 2, 0),
 
+    JS_FN("IsReadableStream", intrinsic_IsInstanceOfBuiltin<ReadableStream>, 1, 0),
+    JS_FN("IsReadableStreamDefaultController",
+          intrinsic_IsInstanceOfBuiltin<ReadableStreamDefaultController>, 1, 0),
+    JS_FN("IsReadableStreamDefaultReader", intrinsic_IsInstanceOfBuiltin<ReadableStreamDefaultReader>, 1, 0),
+    JS_FN("IsReadableStreamBYOBReader", intrinsic_IsInstanceOfBuiltin<ReadableStreamBYOBReader>, 1, 0),
+    JS_FN("IsReadableStreamBYOBRequest", intrinsic_IsInstanceOfBuiltin<ReadableStreamBYOBRequest>, 1, 0),
+    JS_FN("IsReadableByteStreamController", intrinsic_IsInstanceOfBuiltin<ReadableByteStreamController>, 1, 0),
+
     // See builtin/TypedObject.h for descriptors of the typedobj functions.
     JS_FN("NewOpaqueTypedObject",           js::NewOpaqueTypedObject, 1, 0),
     JS_FN("NewDerivedTypedObject",          js::NewDerivedTypedObject, 3, 0),
@@ -2664,6 +2717,7 @@ static const JSFunctionSpec intrinsic_functions[] = {
     JS_FN("RejectPromise", intrinsic_RejectPromise, 2, 0),
     JS_FN("AddPromiseReactions", intrinsic_AddPromiseReactions, 3, 0),
     JS_FN("CallOriginalPromiseThen", intrinsic_CallOriginalPromiseThen, 3, 0),
+    JS_FN("TransferBuffer", intrinsic_TransferBuffer, 2, 0),
 
     JS_FN("IsPromiseObject", intrinsic_IsInstanceOfBuiltin<PromiseObject>, 1, 0),
     JS_FN("CallPromiseMethodIfWrapped", CallNonGenericSelfhostedMethod<Is<PromiseObject>>, 2, 0),
