@@ -34,6 +34,7 @@
     macro(AsyncGeneratorFunction, AsyncGeneratorFunction, "AsyncGeneratorFunction") \
     macro(AsyncWrapped, AsyncWrapped, "AsyncWrapped") \
     macro(async, async, "async") \
+    macro(autoAllocateChunkSize, autoAllocateChunkSize, "autoAllocateChunkSize") \
     macro(await, await, "await") \
     macro(Bool8x16, Bool8x16, "Bool8x16") \
     macro(Bool16x8, Bool16x8, "Bool16x8") \
@@ -45,6 +46,7 @@
     macro(buffer, buffer, "buffer") \
     macro(builder, builder, "builder") \
     macro(by, by, "by") \
+    macro(byob, byob, "byob") \
     macro(byteAlignment, byteAlignment, "byteAlignment") \
     macro(byteLength, byteLength, "byteLength") \
     macro(byteOffset, byteOffset, "byteOffset") \
@@ -55,6 +57,7 @@
     macro(callee, callee, "callee") \
     macro(caller, caller, "caller") \
     macro(callFunction, callFunction, "callFunction") \
+    macro(cancel, cancel, "cancel") \
     macro(case, case_, "case") \
     macro(caseFirst, caseFirst, "caseFirst") \
     macro(catch, catch_, "catch") \
@@ -164,6 +167,7 @@
     macro(has, has, "has") \
     macro(hasOwn, hasOwn, "hasOwn") \
     macro(hasOwnProperty, hasOwnProperty, "hasOwnProperty") \
+    macro(highWaterMark, highWaterMark, "highWaterMark") \
     macro(hour, hour, "hour") \
     macro(if, if_, "if") \
     macro(ignoreCase, ignoreCase, "ignoreCase") \
@@ -224,6 +228,7 @@
     macro(minimumSignificantDigits, minimumSignificantDigits, "minimumSignificantDigits") \
     macro(minute, minute, "minute") \
     macro(missingArguments, missingArguments, "missingArguments") \
+    macro(mode, mode, "mode") \
     macro(module, module, "module") \
     macro(Module, Module, "Module") \
     macro(ModuleInstantiate, ModuleInstantiate, "ModuleInstantiate") \
@@ -271,6 +276,7 @@
     macro(pattern, pattern, "pattern") \
     macro(pending, pending, "pending") \
     macro(public, public_, "public") \
+    macro(pull, pull, "pull") \
     macro(preventExtensions, preventExtensions, "preventExtensions") \
     macro(private, private_, "private") \
     macro(promise, promise, "promise") \
@@ -311,6 +317,7 @@
     macro(StarGeneratorNext, StarGeneratorNext, "StarGeneratorNext") \
     macro(StarGeneratorReturn, StarGeneratorReturn, "StarGeneratorReturn") \
     macro(StarGeneratorThrow, StarGeneratorThrow, "StarGeneratorThrow") \
+    macro(start, start, "start") \
     macro(startTimestamp, startTimestamp, "startTimestamp") \
     macro(state, state, "state") \
     macro(static, static_, "static") \

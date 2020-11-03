@@ -400,6 +400,7 @@ UNIFIED_SOURCES += [
 # with.
 SOURCES += [
     'builtin/RegExp.cpp',
+    'builtin/Stream.cpp',
     'frontend/Parser.cpp',
     'gc/StoreBuffer.cpp',
     'jsarray.cpp',
