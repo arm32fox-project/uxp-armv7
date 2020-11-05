@@ -1434,7 +1434,7 @@ public:
     mDataIsJwk = false;
 
     // Try ArrayBuffer
-    RootedTypedArray<ArrayBuffer> ab(aCx);
+    RootedSpiderMonkeyInterface<ArrayBuffer> ab(aCx);
     if (ab.Init(aKeyData)) {
       if (!mKeyData.Assign(ab)) {
         mEarlyRv = NS_ERROR_DOM_OPERATION_ERR;
@@ -1443,7 +1443,7 @@ public:
     }
 
     // Try ArrayBufferView
-    RootedTypedArray<ArrayBufferView> abv(aCx);
+    RootedSpiderMonkeyInterface<ArrayBufferView> abv(aCx);
     if (abv.Init(aKeyData)) {
       if (!mKeyData.Assign(abv)) {
         mEarlyRv = NS_ERROR_DOM_OPERATION_ERR;
