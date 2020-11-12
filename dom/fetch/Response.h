@@ -115,7 +115,7 @@ public:
 
   static already_AddRefed<Response>
   Constructor(const GlobalObject& aGlobal,
-              const Optional<Nullable<ArrayBufferOrArrayBufferViewOrBlobOrFormDataOrUSVStringOrURLSearchParams>>& aBody,
+              const Optional<Nullable<fetch::ResponseBodyInit>>& aBody,
               const ResponseInit& aInit, ErrorResult& rv);
 
   nsIGlobalObject* GetParentObject() const
@@ -124,10 +124,10 @@ public:
   }
 
   already_AddRefed<Response>
-  Clone(ErrorResult& aRv) const;
+  Clone(JSContext* aCx, ErrorResult& aRv) const;
 
   already_AddRefed<Response>
-  CloneUnfiltered(ErrorResult& aRv) const;
+  CloneUnfiltered(JSContext* aCx, ErrorResult& aRv) const;
 
   void
   SetBody(nsIInputStream* aBody, int64_t aBodySize);

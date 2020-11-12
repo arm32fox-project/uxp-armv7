@@ -9,6 +9,7 @@
 
 typedef object JSON;
 typedef (ArrayBuffer or ArrayBufferView or Blob or FormData or USVString or URLSearchParams) BodyInit;
+typedef (Blob or ArrayBufferView or ArrayBuffer or FormData or URLSearchParams or ReadableStream or USVString) ResponseBodyInit;
 
 [NoInterfaceObject, Exposed=(Window,Worker)]
 interface Body {
