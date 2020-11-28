@@ -125,7 +125,7 @@ GlobalObject::initImportEntryProto(JSContext* cx, Handle<GlobalObject*> global)
     if (!DefinePropertiesAndFunctions(cx, proto, protoAccessors, nullptr))
         return false;
 
-    global->setReservedSlot(IMPORT_ENTRY_PROTO, ObjectValue(*proto));
+    global->initReservedSlot(IMPORT_ENTRY_PROTO, ObjectValue(*proto));
     return true;
 }
 
@@ -203,7 +203,7 @@ GlobalObject::initExportEntryProto(JSContext* cx, Handle<GlobalObject*> global)
     if (!DefinePropertiesAndFunctions(cx, proto, protoAccessors, nullptr))
         return false;
 
-    global->setReservedSlot(EXPORT_ENTRY_PROTO, ObjectValue(*proto));
+    global->initReservedSlot(EXPORT_ENTRY_PROTO, ObjectValue(*proto));
     return true;
 }
 
@@ -235,6 +235,71 @@ ExportEntryObject::create(ExclusiveContext* cx,
     self->initReservedSlot(ModuleRequestSlot, StringOrNullValue(maybeModuleRequest));
     self->initReservedSlot(ImportNameSlot, StringOrNullValue(maybeImportName));
     self->initReservedSlot(LocalNameSlot, StringOrNullValue(maybeLocalName));
+    self->initReservedSlot(LineNumberSlot, Int32Value(lineNumber));
+    self->initReservedSlot(ColumnNumberSlot, Int32Value(columnNumber));
+    return self;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// RequestedModuleObject
+
+/* static */ const Class
+RequestedModuleObject::class_ = {
+    "RequestedModule",
+    JSCLASS_HAS_RESERVED_SLOTS(RequestedModuleObject::SlotCount) |
+    JSCLASS_IS_ANONYMOUS
+};
+
+DEFINE_GETTER_FUNCTIONS(RequestedModuleObject, moduleSpecifier, ModuleSpecifierSlot)
+DEFINE_GETTER_FUNCTIONS(RequestedModuleObject, lineNumber, LineNumberSlot)
+DEFINE_GETTER_FUNCTIONS(RequestedModuleObject, columnNumber, ColumnNumberSlot)
+
+DEFINE_ATOM_ACCESSOR_METHOD(RequestedModuleObject, moduleSpecifier)
+DEFINE_UINT32_ACCESSOR_METHOD(RequestedModuleObject, lineNumber)
+DEFINE_UINT32_ACCESSOR_METHOD(RequestedModuleObject, columnNumber)
+
+/* static */ bool
+RequestedModuleObject::isInstance(HandleValue value)
+{
+    return value.isObject() && value.toObject().is<RequestedModuleObject>();
+}
+
+/* static */ bool
+GlobalObject::initRequestedModuleProto(JSContext* cx, Handle<GlobalObject*> global)
+{
+    static const JSPropertySpec protoAccessors[] = {
+        JS_PSG("moduleSpecifier", RequestedModuleObject_moduleSpecifierGetter, 0),
+        JS_PSG("lineNumber", RequestedModuleObject_lineNumberGetter, 0),
+        JS_PSG("columnNumber", RequestedModuleObject_columnNumberGetter, 0),
+        JS_PS_END
+    };
+
+    RootedObject proto(cx, GlobalObject::createBlankPrototype<PlainObject>(cx, global));
+    if (!proto)
+        return false;
+
+    if (!DefinePropertiesAndFunctions(cx, proto, protoAccessors, nullptr))
+        return false;
+
+    global->initReservedSlot(REQUESTED_MODULE_PROTO, ObjectValue(*proto));
+    return true;
+}
+
+/* static */ RequestedModuleObject*
+RequestedModuleObject::create(JSContext* cx,
+                              HandleAtom moduleSpecifier,
+                              uint32_t lineNumber,
+                              uint32_t columnNumber)
+{
+    MOZ_ASSERT(lineNumber > 0);
+
+    RootedObject proto(cx, cx->global()->getRequestedModulePrototype());
+    RootedObject obj(cx, NewObjectWithGivenProto(cx, &class_, proto));
+    if (!obj)
+        return nullptr;
+
+    RootedRequestedModuleObject self(cx, &obj->as<RequestedModuleObject>());
+    self->initReservedSlot(ModuleSpecifierSlot, StringValue(moduleSpecifier));
     self->initReservedSlot(LineNumberSlot, Int32Value(lineNumber));
     self->initReservedSlot(ColumnNumberSlot, Int32Value(columnNumber));
     return self;
@@ -1074,7 +1139,8 @@ ModuleBuilder::ModuleBuilder(ExclusiveContext* cx, HandleModuleObject module,
   : cx_(cx),
     module_(cx, module),
     tokenStream_(tokenStream),
-    requestedModules_(cx, AtomVector(cx)),
+    requestedModuleSpecifiers_(cx, AtomSet(cx)),
+    requestedModules_(cx, RequestedModuleVector(cx)),
     importedBoundNames_(cx, AtomVector(cx)),
     importEntries_(cx, ImportEntryVector(cx)),
     exportEntries_(cx, ExportEntryVector(cx)),
@@ -1082,6 +1148,12 @@ ModuleBuilder::ModuleBuilder(ExclusiveContext* cx, HandleModuleObject module,
     indirectExportEntries_(cx, ExportEntryVector(cx)),
     starExportEntries_(cx, ExportEntryVector(cx))
 {}
+
+bool
+ModuleBuilder::init()
+{
+    return requestedModuleSpecifiers_.init();
+}
 
 bool
 ModuleBuilder::buildTables()
@@ -1130,24 +1202,23 @@ ModuleBuilder::buildTables()
 bool
 ModuleBuilder::initModule()
 {
-    RootedArrayObject requestedModules(cx_, createArray<JSAtom*>(requestedModules_));
+    RootedArrayObject requestedModules(cx_, createArray(requestedModules_));
     if (!requestedModules)
         return false;
 
-    RootedArrayObject importEntries(cx_, createArray<ImportEntryObject*>(importEntries_));
+    RootedArrayObject importEntries(cx_, createArray(importEntries_));
     if (!importEntries)
         return false;
 
-    RootedArrayObject localExportEntries(cx_, createArray<ExportEntryObject*>(localExportEntries_));
+    RootedArrayObject localExportEntries(cx_, createArray(localExportEntries_));
     if (!localExportEntries)
         return false;
 
-    RootedArrayObject indirectExportEntries(cx_);
-    indirectExportEntries = createArray<ExportEntryObject*>(indirectExportEntries_);
+    RootedArrayObject indirectExportEntries(cx_, createArray(indirectExportEntries_));
     if (!indirectExportEntries)
         return false;
 
-    RootedArrayObject starExportEntries(cx_, createArray<ExportEntryObject*>(starExportEntries_));
+    RootedArrayObject starExportEntries(cx_, createArray(starExportEntries_));
     if (!starExportEntries)
         return false;
 
@@ -1169,7 +1240,7 @@ ModuleBuilder::processImport(frontend::ParseNode* pn)
     MOZ_ASSERT(pn->pn_right->isKind(PNK_STRING));
 
     RootedAtom module(cx_, pn->pn_right->pn_atom);
-    if (!maybeAppendRequestedModule(module))
+    if (!maybeAppendRequestedModule(module, pn->pn_right))
         return false;
 
     for (ParseNode* spec = pn->pn_left->pn_head; spec; spec = spec->pn_next) {
@@ -1277,7 +1348,7 @@ ModuleBuilder::processExportFrom(frontend::ParseNode* pn)
     MOZ_ASSERT(pn->pn_right->isKind(PNK_STRING));
 
     RootedAtom module(cx_, pn->pn_right->pn_atom);
-    if (!maybeAppendRequestedModule(module))
+    if (!maybeAppendRequestedModule(module, pn->pn_right))
         return false;
 
     for (ParseNode* spec = pn->pn_left->pn_head; spec; spec = spec->pn_next) {
@@ -1346,29 +1417,26 @@ ModuleBuilder::appendExportFromEntry(HandleAtom exportName, HandleAtom moduleReq
 }
 
 bool
-ModuleBuilder::maybeAppendRequestedModule(HandleAtom module)
+ModuleBuilder::maybeAppendRequestedModule(HandleAtom specifier, ParseNode* node)
 {
-    for (auto m : requestedModules_) {
-        if (m == module)
-            return true;
+    if (requestedModuleSpecifiers_.has(specifier)) {
+        return true;
     }
-    return requestedModules_.append(module);
-}
-
-static Value
-MakeElementValue(JSString *string)
-{
-    return StringValue(string);
-}
-
-static Value
-MakeElementValue(JSObject *object)
-{
-    return ObjectValue(*object);
+    uint32_t line;
+    uint32_t column;
+    tokenStream_.srcCoords.lineNumAndColumnIndex(node->pn_pos.begin, &line, &column);
+    JSContext* cx = reinterpret_cast<JSContext*>(cx_);
+    RootedRequestedModuleObject req(cx, RequestedModuleObject::create(cx, specifier, line, column));
+    if (!req) {
+        return false;
+    }
+    return FreezeObject(cx, req) &&
+           requestedModules_.append(req) &&
+           requestedModuleSpecifiers_.put(specifier);
 }
 
 template <typename T>
-ArrayObject* ModuleBuilder::createArray(const GCVector<T>& vector)
+ArrayObject* ModuleBuilder::createArray(const JS::Rooted<GCVector<T>>& vector)
 {
     uint32_t length = vector.length();
     RootedArrayObject array(cx_, NewDenseFullyAllocatedArray(cx_, length));
@@ -1377,7 +1445,7 @@ ArrayObject* ModuleBuilder::createArray(const GCVector<T>& vector)
 
     array->setDenseInitializedLength(length);
     for (uint32_t i = 0; i < length; i++)
-        array->initDenseElement(i, MakeElementValue(vector[i]));
+        array->initDenseElement(i, ObjectValue(*vector[i]));
 
     return array;
 }

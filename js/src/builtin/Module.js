@@ -363,7 +363,7 @@ function InnerModuleInstantiation(module, stack, index)
     // Step 9
     let requestedModules = module.requestedModules;
     for (let i = 0; i < requestedModules.length; i++) {
-        let required = requestedModules[i];
+        let required = requestedModules[i].moduleSpecifier;
         let requiredModule = CallModuleResolveHook(module, required, MODULE_STATUS_UNINSTANTIATED);
 
         index = InnerModuleInstantiation(requiredModule, stack, index);
@@ -591,7 +591,7 @@ function InnerModuleEvaluation(module, stack, index)
     // Step 10
     let requestedModules = module.requestedModules;
     for (let i = 0; i < requestedModules.length; i++) {
-        let required = requestedModules[i];
+        let required = requestedModules[i].moduleSpecifier;
         let requiredModule =
             CallModuleResolveHook(module, required, MODULE_STATUS_INSTANTIATED);
 

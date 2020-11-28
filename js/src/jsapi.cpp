@@ -4729,13 +4729,28 @@ JS::GetRequestedModules(JSContext* cx, JS::HandleObject moduleArg)
     return &moduleArg->as<ModuleObject>().requestedModules();
 }
 
-JS_PUBLIC_API(JSScript*)
-JS::GetModuleScript(JSContext* cx, JS::HandleObject moduleArg)
+JS_PUBLIC_API(JSString*)
+JS::GetRequestedModuleSpecifier(JSContext* cx, JS::HandleValue value)
 {
     AssertHeapIsIdle(cx);
     CHECK_REQUEST(cx);
-    assertSameCompartment(cx, moduleArg);
-    return moduleArg->as<ModuleObject>().script();
+    assertSameCompartment(cx, value);
+    JSObject* obj = &value.toObject();
+    return obj->as<RequestedModuleObject>().moduleSpecifier();
+}
+
+JS_PUBLIC_API(void)
+JS::GetRequestedModuleSourcePos(JSContext* cx, JS::HandleValue value,
+                                uint32_t* lineNumber, uint32_t* columnNumber)
+{
+    AssertHeapIsIdle(cx);
+    CHECK_REQUEST(cx);
+    assertSameCompartment(cx, value);
+    MOZ_ASSERT(lineNumber);
+    MOZ_ASSERT(columnNumber);
+    auto& requested = value.toObject().as<RequestedModuleObject>();
+    *lineNumber = requested.lineNumber();
+    *columnNumber = requested.columnNumber();
 }
 
 JS_PUBLIC_API(JSObject*)
