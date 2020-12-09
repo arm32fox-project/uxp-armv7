@@ -61,7 +61,7 @@
     'defines': [
       'SHLIB_SUFFIX=\"<(dll_suffix)\"',
       'SHLIB_PREFIX=\"<(dll_prefix)\"',
-      'NSS_SHLIB_VERSION=\"3\"',
+      'SHLIB_VERSION=\"3\"',
       'SOFTOKEN_SHLIB_VERSION=\"3\"'
     ]
   },

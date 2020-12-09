@@ -8,7 +8,6 @@ DEPTH = ../..
 MODULE = gtest
 
 LIBRARY_NAME = gtest
-SHARED_LIBRARY = $(NULL)
 
 INCLUDES += -Igtest/include/ -Igtest
 

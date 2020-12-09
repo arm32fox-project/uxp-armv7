@@ -66,10 +66,11 @@ $(SHARED_LIBRARY): $(CRYPTOLIB)
 ifeq ($(OS_TARGET)$(OS_RELEASE),AIX4.3)
 ifeq ($(USE_64),1)
 ifndef BUILD_OPT
-$(OBJDIR)/pkcs11.o: pkcs11.c | $$(@D)/d
+$(OBJDIR)/pkcs11.o: pkcs11.c
+	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c -O2 $(CFLAGS) $<
-
-$(OBJDIR)/pkcs11c.o: pkcs11c.c | $$(@D)/d
+$(OBJDIR)/pkcs11c.o: pkcs11c.c
+	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c -O2 $(CFLAGS) $<
 endif
 endif
