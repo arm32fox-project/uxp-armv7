@@ -5,9 +5,7 @@
 
 CORE_DEPTH = ../..
 
-DIRS = . builtins
-
-builtins: .
+DIRS = builtins
 
 PRIVATE_EXPORTS = \
 	ck.h		  \
