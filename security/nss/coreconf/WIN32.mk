@@ -92,6 +92,8 @@ MKDEPEND        = $(MKDEPEND_DIR)/$(OBJDIR_NAME)/mkdepend.exe
 MKDEPENDENCIES  = $(OBJDIR_NAME)/depend.mk
 
 INSTALL      = $(NSINSTALL)
+MAKE_OBJDIR  = mkdir
+MAKE_OBJDIR += $(OBJDIR)
 GARBAGE     += $(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb
 XP_DEFINE   += -DXP_PC
 ifdef NS_USE_GCC
@@ -100,10 +102,6 @@ else
 LIB_SUFFIX   = lib
 endif
 DLL_SUFFIX   = dll
-
-define MAKE_OBJDIR
-if test ! -d $(@D); then mkdir -p $(@D); fi
-endef
 
 ifdef NS_USE_GCC
     OS_CFLAGS += -mwindows
@@ -187,8 +185,6 @@ endif
 endif
 	# Purify requires /FIXED:NO when linking EXEs.
 	LDFLAGS    += /FIXED:NO
-	# So the linker will find main in the gtestutil library
-	LDFLAGS    += -SUBSYSTEM:CONSOLE
     endif
 ifneq ($(_MSC_VER),$(_MSC_VER_6))
     # NSS has too many of these to fix, downgrade the warning

@@ -10,33 +10,22 @@
 #######################################################################
 
 #######################################################################
-# Dont't use double-colon rules!                                      #
+# Double-Colon rules for utilizing the binary release model.          #
 #######################################################################
 
-ifndef HAVE_ALL_TARGET
-all: libs
-endif
+all:: export libs 
 
-autobuild:
 ifeq ($(AUTOCLEAN),1)
-	$(MAKE) clean
+autobuild:: clean export private_export libs program install
+else
+autobuild:: export private_export libs program install
 endif
-	$(MAKE) all
-	$(MAKE) install
 
-platform:
+platform::
 	@echo $(OBJDIR_NAME)
 
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 USE_NT_C_SYNTAX=1
-endif
-
-ifdef DIRS
-ifndef IGNORE_DIRS
-$(DIRS):
-	$(IGNORE_ERROR)@$(MAKE) -C $@ $(MAKECMDGOALS)
-	@$(CLICK_STOPWATCH)
-endif
 endif
 
 #
@@ -48,7 +37,7 @@ endif
 # note: if there is a trailing slash, the component will be appended
 #       (see import.pl - only used for xpheader.jar)
 
-import:
+import::
 	@echo "== import.pl =="
 	@$(PERL) -I$(CORE_DEPTH)/coreconf $(CORE_DEPTH)/coreconf/import.pl \
 		"RELEASE_TREE=$(RELEASE_TREE)"   \
@@ -71,17 +60,23 @@ ifeq ($(OS_TARGET),Darwin)
 	find $(SOURCE_MD_DIR)/lib -name "*.a" -exec $(RANLIB) {} \;
 endif
 
-export: $(DIRS) private_export
+export:: 
+	+$(LOOP_OVER_DIRS)
 
-release_export: $(DIRS)
+private_export::
+	+$(LOOP_OVER_DIRS)
 
-release_classes: $(DIRS)
+release_export::
+	+$(LOOP_OVER_DIRS)
 
-libs program install: $(DIRS) $(TARGETS)
-ifneq ($(LIBRARY),)
+release_classes::
+	+$(LOOP_OVER_DIRS)
+
+libs program install:: $(TARGETS)
+ifdef LIBRARY
 	$(INSTALL) -m 664 $(LIBRARY) $(SOURCE_LIB_DIR)
 endif
-ifneq ($(SHARED_LIBRARY),)
+ifdef SHARED_LIBRARY
 	$(INSTALL) -m 775 $(SHARED_LIBRARY) $(SOURCE_LIB_DIR)
 ifdef MOZ_DEBUG_SYMBOLS
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
@@ -89,10 +84,10 @@ ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 endif
 endif
 endif
-ifneq ($(IMPORT_LIBRARY),)
+ifdef IMPORT_LIBRARY
 	$(INSTALL) -m 775 $(IMPORT_LIBRARY) $(SOURCE_LIB_DIR)
 endif
-ifneq ($(PROGRAM),)
+ifdef PROGRAM
 	$(INSTALL) -m 775 $(PROGRAM) $(SOURCE_BIN_DIR)
 ifdef MOZ_DEBUG_SYMBOLS
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
@@ -100,24 +95,33 @@ ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 endif
 endif
 endif
-ifneq ($(PROGRAMS),)
+ifdef PROGRAMS
 	$(INSTALL) -m 775 $(PROGRAMS) $(SOURCE_BIN_DIR)
 endif
+	+$(LOOP_OVER_DIRS)
 
-check: $(DIRS)
+tests::
+	+$(LOOP_OVER_DIRS)
 
-clean clobber: $(DIRS)
+clean clobber::
 	rm -rf $(ALL_TRASH)
+	+$(LOOP_OVER_DIRS)
 
-realclean clobber_all: $(DIRS)
+realclean clobber_all::
 	rm -rf $(wildcard *.OBJ) dist $(ALL_TRASH)
+	+$(LOOP_OVER_DIRS)
 
-release_clean:
+#######################################################################
+# Double-Colon rules for populating the binary release model.         #
+#######################################################################
+
+
+release_clean::
 	rm -rf $(SOURCE_XP_DIR)/release/$(RELEASE_MD_DIR)
 
-release: release_clean release_export release_classes release_policy release_md release_jars release_cpdistdir
+release:: release_clean release_export release_classes release_policy release_md release_jars release_cpdistdir
 
-release_cpdistdir:
+release_cpdistdir::
 	@echo "== cpdist.pl =="
 	@$(PERL) -I$(CORE_DEPTH)/coreconf $(CORE_DEPTH)/coreconf/cpdist.pl \
 		"RELEASE_TREE=$(RELEASE_TREE)" \
@@ -143,7 +147,7 @@ release_cpdistdir:
 # $(SOURCE_RELEASE_xxx_JAR) is a name like yyy.jar
 # $(SOURCE_RELEASE_xx_DIR)  is a name like 
 
-release_jars:
+release_jars::
 	@echo "== release.pl =="
 	@$(PERL) -I$(CORE_DEPTH)/coreconf $(CORE_DEPTH)/coreconf/release.pl \
 		"RELEASE_TREE=$(RELEASE_TREE)" \
@@ -189,16 +193,17 @@ endif
 
 # Substitute \$ for $ so the shell doesn't choke
 ifdef BUILD_OPT
-release_classes:
+release_classes::
 	$(INSTALL) -m 444 $(subst $$,\$$,$(RELEASE_FILES)) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_CLASSES_DIR)/$(PACKAGE)
 else
-release_classes:
+release_classes::
 	$(INSTALL) -m 444 $(subst $$,\$$,$(RELEASE_DBG_FILES)) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_CLASSES_DBG_DIR)/$(PACKAGE)
 endif
 
 endif
 
-release_policy: $(DIRS)
+release_policy::
+	+$(LOOP_OVER_DIRS)
 
 ifndef NO_MD_RELEASE
     ifdef LIBRARY
@@ -218,55 +223,33 @@ ifndef NO_MD_RELEASE
     endif
 endif
 
-release_md:: $(DIRS)
+release_md::
 ifneq ($(MD_LIB_RELEASE_FILES),)
 	$(INSTALL) -m 444 $(MD_LIB_RELEASE_FILES) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_LIB_DIR)
 endif
 ifneq ($(MD_BIN_RELEASE_FILES),)
 	$(INSTALL) -m 555 $(MD_BIN_RELEASE_FILES) $(SOURCE_RELEASE_PREFIX)/$(SOURCE_RELEASE_BIN_DIR)
 endif
+	+$(LOOP_OVER_DIRS)
+
 
 alltags:
 	rm -f TAGS
 	find . -name dist -prune -o \( -name '*.[hc]' -o -name '*.cp' -o -name '*.cpp' \) -print | xargs etags -a
 	find . -name dist -prune -o \( -name '*.[hc]' -o -name '*.cp' -o -name '*.cpp' \) -print | xargs ctags -a
 
-define PROGRAM_template
-
-ifndef $(1)_OBJS
-ifdef LIBRARY_NAME
-	$(1)_OBJS := $$(patsubst $$(PROG_PREFIX)%,%,$$(patsubst %$$(PROG_SUFFIX),%,$(1)))$$(OBJ_SUFFIX)
-endif
-ifdef PROGRAMS
-	$(1)_OBJS := $$(patsubst $$(PROG_PREFIX)%,%,$$(patsubst %$$(PROG_SUFFIX),%,$(1)))$$(OBJ_SUFFIX)
-endif
-ifndef $(1)_OBJS
-	$(1)_OBJS := $$(OBJS)
-endif
-endif
-
-$(1): $$($(1)_OBJS) $$(EXTRA_LIBS)
-	@$$(MAKE_OBJDIR)
-	rm -f $$@
-ifeq (,$$(filter-out _WIN%,$$(NS_USE_GCC)_$$(OS_TARGET)))
-	$$(MKPROG) $$($(1)_OBJS) -Fe$$@ -link $$(LDFLAGS) $$(XLDFLAGS) $$(EXTRA_LIBS) $$(EXTRA_SHARED_LIBS) $$(OS_LIBS)
+$(PROGRAM): $(OBJS) $(EXTRA_LIBS)
+	@$(MAKE_OBJDIR)
+ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
+	$(MKPROG) $(subst /,\\,$(OBJS)) -Fe$@ -link $(LDFLAGS) $(XLDFLAGS) $(subst /,\\,$(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS))
 ifdef MT
-	if test -f $$@.manifest; then \
-		$$(MT) -NOLOGO -MANIFEST $$@.manifest -OUTPUTRESOURCE:$$@\;1; \
-		rm -f $$@.manifest; \
+	if test -f $@.manifest; then \
+		$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
+		rm -f $@.manifest; \
 	fi
 endif	# MSVC with manifest tool
 else
-	$$(MKPROG) -o $$@ $$(CFLAGS) $$($(1)_OBJS) $$(LDFLAGS) $$(EXTRA_LIBS) $$(EXTRA_SHARED_LIBS) $$(OS_LIBS)
-endif
-endef # PROGRAM_template
-
-ifdef PROGRAM
-$(eval $(call PROGRAM_template,$(PROGRAM)))
-else
-ifdef PROGRAMS
-$(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_template,$(prog))))
-endif
+	$(MKPROG) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
 endif
 
 get_objs:
@@ -290,7 +273,8 @@ $(IMPORT_LIBRARY): $(MAPFILE)
 	$(RANLIB) $@
 endif
 ifeq ($(OS_ARCH),WINNT)
-$(IMPORT_LIBRARY): $(SHARED_LIBRARY)
+$(IMPORT_LIBRARY): $(LIBRARY)
+	cp -f $< $@
 endif
 
 ifdef SHARED_LIBRARY_LIBS
@@ -346,6 +330,23 @@ endif
 $(MAPFILE): $(MAPFILE_SOURCE)
 	@$(MAKE_OBJDIR)
 	$(PROCESS_MAP_FILE)
+
+
+$(OBJDIR)/$(PROG_PREFIX)%$(PROG_SUFFIX): $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX)
+	@$(MAKE_OBJDIR)
+ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
+	$(MKPROG) $< -Fe$@ -link \
+	$(LDFLAGS) $(XLDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+ifdef MT
+	if test -f $@.manifest; then \
+		$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
+		rm -f $@.manifest; \
+	fi
+endif	# MSVC with manifest tool
+else
+	$(MKPROG) -o $@ $(CFLAGS) $< \
+	$(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+endif
 
 WCCFLAGS1 := $(subst /,\\,$(CFLAGS))
 WCCFLAGS2 := $(subst -I,-i=,$(WCCFLAGS1))
@@ -500,7 +501,7 @@ endif
 # Bunch of things that extend the 'export' rule (in order):
 ################################################################################
 
-$(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE) $(JMCSRCDIR):
+$(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE) $(JMCSRCDIR)::
 	@if test ! -d $@; then	    \
 		echo Creating $@;   \
 		rm -rf $@;	    \
@@ -512,12 +513,12 @@ $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE) $(JMCSRCDIR):
 
 ifneq ($(IDL_GEN),)
 
-#export:
+#export::
 #	$(IDL2JAVA) $(IDL_GEN)
 
-#all: export
+#all:: export
 
-#clobber:
+#clobber::
 #	rm -f $(IDL_GEN:.idl=.class)	# XXX wrong!
 
 endif
@@ -537,14 +538,14 @@ endif
 
 JAVA_EXPORT_SRCS=$(shell $(PERL) $(CORE_DEPTH)/coreconf/outofdate.pl $(PERLARG)	-d $(JAVA_DESTPATH)/$(PACKAGE) $(JSRCS) $(PRIVATE_JSRCS))
 
-export: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
+export:: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
 ifneq ($(JAVA_EXPORT_SRCS),)
 	$(JAVAC) $(JAVA_EXPORT_SRCS)
 endif
 
-all: export
+all:: export
 
-clobber:
+clobber::
 	rm -f $(SOURCE_XP_DIR)/classes/$(PACKAGE)/*.class
 
 endif
@@ -571,7 +572,7 @@ endif
 # to parse the '=' character. A solution is to rewrite outofdate.pl so it
 # takes the Javac command as an argument and executes the command itself,
 # instead of returning a list of files.
-export: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
+export:: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
 	@echo "!!! THIS COMMAND IS BROKEN ON WINDOWS--SEE rules.mk FOR DETAILS !!!"
 	return -1
 	@for d in $(JDIRS); do							\
@@ -624,7 +625,7 @@ JDK_STUB_CFILES		:= $(patsubst %,$(JDK_STUB_DIR)/%.c,$(JDK_GEN))
 $(JDK_HEADER_CFILES): $(JDK_HEADER_CLASSFILES)
 $(JDK_STUB_CFILES): $(JDK_STUB_CLASSFILES)
 
-export:
+export::
 	@echo Generating/Updating JDK headers 
 	$(JAVAH) -d $(JDK_GEN_DIR) $(JDK_PACKAGE_CLASSES)
 	@echo Generating/Updating JDK stubs
@@ -673,7 +674,7 @@ JRI_STUB_CFILES		:= $(patsubst %,$(JRI_GEN_DIR)/%.c,$(JRI_GEN))
 $(JRI_HEADER_CFILES): $(JRI_HEADER_CLASSFILES)
 $(JRI_STUB_CFILES): $(JRI_STUB_CLASSFILES)
 
-export:
+export::
 	@echo Generating/Updating JRI headers 
 	$(JAVAH) -jri -d $(JRI_GEN_DIR) $(JRI_PACKAGE_CLASSES)
 	@echo Generating/Updating JRI stubs
@@ -701,7 +702,7 @@ ifneq ($(JNI_GEN),)
 ifneq ($(JAVAH),)
 JNI_HEADERS		:= $(patsubst %,$(JNI_GEN_DIR)/%.h,$(JNI_GEN))
 
-export:
+export::
 	@if test ! -d $(JNI_GEN_DIR); then						\
 		echo $(JAVAH) -jni -d $(JNI_GEN_DIR) $(JNI_GEN);			\
 		$(JAVAH) -jni -d $(JNI_GEN_DIR) $(JNI_GEN);				\
@@ -725,7 +726,7 @@ JMC_EXPORT_FILES	:= $(patsubst %,$(JAVA_DESTPATH)/$(PACKAGE)/%.class,$(JMC_EXPOR
 # your NSDISTMODE and make links relative to the current directory. This is a
 # problem because the source isn't in the current directory:
 #
-export: $(JMC_EXPORT_FILES) $(JMCSRCDIR)
+export:: $(JMC_EXPORT_FILES) $(JMCSRCDIR)
 	$(NSINSTALL) -t -m 444 $(JMC_EXPORT_FILES) $(JMCSRCDIR)
 endif
 
@@ -751,7 +752,7 @@ $(OBJDIR)/M%$(OBJ_SUFFIX): $(JMC_GEN_DIR)/M%.c $(JMC_GEN_DIR)/M%.h
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(CFLAGS) $<
 
-export: $(JMC_HEADERS) $(JMC_STUBS)
+export:: $(JMC_HEADERS) $(JMC_STUBS)
 endif
 endif
 
@@ -761,13 +762,18 @@ endif
 PUBLIC_EXPORT_DIR = $(SOURCE_XP_DIR)/public/$(MODULE)
 
 ifneq ($(EXPORTS),)
-$(PUBLIC_EXPORT_DIR)/d:
-	@$(MAKE_OBJDIR)
+$(PUBLIC_EXPORT_DIR)::
+	@if test ! -d $@; then	    \
+		echo Creating $@;   \
+		$(NSINSTALL) -D $@; \
+	fi
 
-$(PUBLIC_EXPORT_DIR)/%: %
+export:: $(PUBLIC_EXPORT_DIR) 
+
+export:: $(EXPORTS) 
 	$(INSTALL) -m 444 $^ $(PUBLIC_EXPORT_DIR)
 
-export: $(addprefix $(PUBLIC_EXPORT_DIR)/,$(EXPORTS)) | $(PUBLIC_EXPORT_DIR)/d
+export:: $(BUILT_SRCS)
 endif
 
 # Duplicate export rule for private exports, with different directories
@@ -775,16 +781,19 @@ endif
 PRIVATE_EXPORT_DIR = $(SOURCE_XP_DIR)/private/$(MODULE)
 
 ifneq ($(PRIVATE_EXPORTS),)
-$(PRIVATE_EXPORT_DIR)/d:
-	@$(MAKE_OBJDIR)
+$(PRIVATE_EXPORT_DIR)::
+	@if test ! -d $@; then	    \
+		echo Creating $@;   \
+		$(NSINSTALL) -D $@; \
+	fi
 
-$(PRIVATE_EXPORT_DIR)/%: %
+private_export:: $(PRIVATE_EXPORT_DIR)
+
+private_export:: $(PRIVATE_EXPORTS) 
 	$(INSTALL) -m 444 $^ $(PRIVATE_EXPORT_DIR)
-
-private_export: $(addprefix $(PRIVATE_EXPORT_DIR)/,$(PRIVATE_EXPORTS)) | $(PRIVATE_EXPORT_DIR)/d
 else
-private_export:
-	@echo "There are no private exports."
+private_export:: 
+	@echo There are no private exports.;
 endif
 
 ##########################################################################
@@ -801,10 +810,7 @@ ifneq ($(BUILD_OPT),)
 REGDATE = $(subst \ ,, $(shell $(PERL)  $(CORE_DEPTH)/$(MODULE)/scripts/now))
 endif
 
-$(TESTS_DIR)/d:
-	@$(MAKE_OBJDIR)
-
-check: $(REGRESSION_SPEC)
+tests:: $(REGRESSION_SPEC)
 	cd $(PLATFORM); \
 	../$(SOURCE_MD_DIR)/bin/regress$(PROG_SUFFIX) specfile=../$(REGRESSION_SPEC) progress $(EXTRA_REGRESS_OPTIONS); \
 	if test ! -d $(TESTS_DIR); then \
@@ -818,30 +824,31 @@ ifneq ($(BUILD_OPT),)
 	echo "then run 'reporter specfile=$(RESULTS_DIR)/rptspec'"
 endif
 else
-check:
-	@echo "Error: you didn't specify REGRESSION_SPEC in your manifest.mn file!"
+tests::
+	@echo Error: you didn't specify REGRESSION_SPEC in your manifest.mn file!;
 endif
 
 
 # Duplicate export rule for releases, with different directories
 
 ifneq ($(EXPORTS),)
-$(SOURCE_RELEASE_XP_DIR)/include:
+$(SOURCE_RELEASE_XP_DIR)/include::
 	@if test ! -d $@; then	    \
 		echo Creating $@;   \
 		$(NSINSTALL) -D $@; \
 	fi
 
-release_export: $(SOURCE_RELEASE_XP_DIR)/include
+release_export:: $(SOURCE_RELEASE_XP_DIR)/include
 
-release_export: $(EXPORTS)
+release_export:: $(EXPORTS)
 	$(INSTALL) -m 444 $^ $(SOURCE_RELEASE_XP_DIR)/include
 endif
 
 
+
+
 ################################################################################
 
-ifeq ($(MAKECMDGOALS),clean)
 -include $(DEPENDENCIES)
 
 ifneq (,$(filter-out OS2 WIN%,$(OS_TARGET)))
@@ -887,7 +894,7 @@ ifdef MKDEPENDENCIES
 
 # For Windows, $(MKDEPENDENCIES) must be -included before including rules.mk
 
-$(MKDEPENDENCIES):
+$(MKDEPENDENCIES)::
 	@$(MAKE_OBJDIR)
 	touch $(MKDEPENDENCIES) 
 	chmod u+w $(MKDEPENDENCIES) 
@@ -896,25 +903,25 @@ $(MKDEPENDENCIES):
 	$(MKDEPEND) -p$(OBJDIR_NAME)/ -o'$(OBJ_SUFFIX)' -f$(MKDEPENDENCIES) \
 $(NOMD_CFLAGS) $(YOPT) $(CSRCS) $(CPPSRCS) $(ASFILES)
 
-$(MKDEPEND): $(MKDEPEND_DIR)/*.c $(MKDEPEND_DIR)/*.h
+$(MKDEPEND):: $(MKDEPEND_DIR)/*.c $(MKDEPEND_DIR)/*.h
 	$(MAKE) -C $(MKDEPEND_DIR)
 
 ifdef OBJS
-depend: $(DIRS) $(MKDEPEND) $(MKDEPENDENCIES)
+depend:: $(MKDEPEND) $(MKDEPENDENCIES)
 else
-depend: $(DIRS)
+depend::
 endif
+	+$(LOOP_OVER_DIRS)
 
-dependclean: $(DIRS)
+dependclean::
 	rm -f $(MKDEPENDENCIES)
+	+$(LOOP_OVER_DIRS)
 
 #-include $(NSINSTALL_DIR)/$(OBJDIR)/depend.mk
 
 else
-depend:
+depend::
 endif
-endif
-
 
 #
 # HACK ALERT
@@ -959,5 +966,5 @@ $(filter $(OBJDIR)/%$(OBJ_SUFFIX),$(OBJS)): $(OBJDIR)/%$(OBJ_SUFFIX): $(DUMMY_DE
 # Fake targets.  Always run these rules, even if a file/directory with that
 # name already exists.
 #
-.PHONY: all all_platforms alltags boot clean clobber clobber_all export install libs program realclean release $(DIRS)
+.PHONY: all all_platforms alltags boot clean clobber clobber_all export install libs program realclean release $(OBJDIR)
 

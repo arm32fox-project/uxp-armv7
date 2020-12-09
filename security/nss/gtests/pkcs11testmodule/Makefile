@@ -20,8 +20,6 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (3) Include "component" configuration information. (OPTIONAL)       #
 #######################################################################
 
-LIBRARY = $(NULL)
-IMPORT_LIBRARY = $(NULL)
 
 #######################################################################
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
@@ -44,3 +42,4 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
 
+export:: private_export

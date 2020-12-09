@@ -133,10 +133,13 @@ ifndef BUILT_SRCS
 		 $(BUILT_CSRCS) $(BUILT_CPPSRCS) $(BUILT_ASFILES))
 endif
 
-ifndef MAKE_OBJDIR
-define MAKE_OBJDIR
-if test ! -d $(@D); then $(NSINSTALL) -D $(@D); fi
-endef
+
+ifeq (,$(filter-out WIN%,$(OS_TARGET)))
+    MAKE_OBJDIR = $(INSTALL) -D $(OBJDIR)
+else
+    define MAKE_OBJDIR
+	if test ! -d $(@D); then rm -rf $(@D); $(NSINSTALL) -D $(@D); fi
+    endef
 endif
 
 ifndef PACKAGE
@@ -201,6 +204,17 @@ endif
 
 ifdef SYSTEM_INCL_DIR
     YOPT = -Y$(SYSTEM_INCL_DIR)
+endif
+
+ifdef DIRS
+define SUBMAKE
++@echo "cd $2; $(MAKE) $1"
+$(IGNORE_ERROR)@$(MAKE) -C $(2) $(1)
+@$(CLICK_STOPWATCH)
+
+endef
+
+    LOOP_OVER_DIRS	= $(foreach dir,$(DIRS),$(call SUBMAKE,$@,$(dir)))
 endif
 
 MK_RULESET = included

@@ -47,6 +47,8 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 
 WARNING_CFLAGS = $(NULL)
 
+export:: private_export
+
 ifeq (WINNT,$(OS_ARCH))
 # sqlite calls the deprecated GetVersionExA method
 OS_CFLAGS += -w44996
