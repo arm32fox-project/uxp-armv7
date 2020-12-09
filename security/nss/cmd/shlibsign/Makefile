@@ -96,6 +96,4 @@ else
 endif
 
 libs: install
-ifdef CHECKLOC
 	$(MAKE) $(CHECKLOC)
-endif
