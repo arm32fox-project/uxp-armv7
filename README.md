@@ -1,5 +1,7 @@
 # Unified XUL Platform (UXP)
 
+**THIS IS A CLOSED/STALE BRANCH - DO NOT USE**
+
 This repository holds the code for a unified application platform for XUL-based
 applications. It is a hard fork from the Mozilla code repository (mozilla-central)
 with an ESR-52 fork point.
