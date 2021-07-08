@@ -118,6 +118,10 @@ CSS_PROP_ALIAS(-moz-animation-timing-function,
                animation_timing_function,
                MozAnimationTimingFunction,
                "layout.css.prefixes.animations")
+CSS_PROP_ALIAS(-moz-appearance,
+               appearance,
+               MozAppearance,
+               "layout.css.prefixes.appearance")
 CSS_PROP_ALIAS(-moz-box-sizing,
                box_sizing,
                MozBoxSizing,

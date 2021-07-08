@@ -2485,6 +2485,7 @@ pref("layout.css.font-display.enabled", false);
 pref("layout.css.font-variations.stub", true);
 
 // Are sets of prefixed properties supported?
+pref("layout.css.prefixes.appearance", true);
 pref("layout.css.prefixes.border-image", true);
 pref("layout.css.prefixes.transforms", true);
 pref("layout.css.prefixes.transitions", true);
