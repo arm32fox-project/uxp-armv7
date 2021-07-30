@@ -24,9 +24,11 @@
 #include "builtin/SelfHostingDefines.h"
 #ifdef DEBUG
 #include "frontend/TokenStream.h"
+#ifndef JS_NEW_REGEXP
 #include "irregexp/RegExpAST.h"
 #include "irregexp/RegExpEngine.h"
 #include "irregexp/RegExpParser.h"
+#endif
 #endif
 #include "jit/InlinableNatives.h"
 #include "jit/JitFrameIterator.h"
@@ -3596,7 +3598,7 @@ GetModuleEnvironmentValue(JSContext* cx, unsigned argc, Value* vp)
     return GetProperty(cx, env, env, id, args.rval());
 }
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(JS_NEW_REGEXP)
 static const char*
 AssertionTypeToString(irregexp::RegExpAssertion::AssertionType type)
 {
@@ -3961,7 +3963,7 @@ DisRegExp(JSContext* cx, unsigned argc, Value* vp)
     args.rval().setUndefined();
     return true;
 }
-#endif // DEBUG
+#endif // DEBUG && !JS_NEW_REGEXP
 
 static bool
 IsConstructor(JSContext* cx, unsigned argc, Value* vp)
@@ -4502,7 +4504,7 @@ JS_FN_HELP("rejectPromise", RejectPromise, 2, 0,
 };
 
 static const JSFunctionSpecWithHelp FuzzingUnsafeTestingFunctions[] = {
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(JS_NEW_REGEXP)
     JS_FN_HELP("parseRegExp", ParseRegExp, 3, 0,
 "parseRegExp(pattern[, flags[, match_only])",
 "  Parses a RegExp pattern and returns a tree, potentially throwing."),
