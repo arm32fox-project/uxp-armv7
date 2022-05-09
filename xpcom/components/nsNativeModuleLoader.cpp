@@ -104,7 +104,13 @@ nsNativeModuleLoader::LoadModule(FileLocation& aFile)
   }
 
   nsAutoCString filePath;
+#ifdef XP_WIN
+  nsAutoString filePathW;
+  file->GetPath(filePathW);
+  CopyUTF16toUTF8(filePathW, filePath);
+#else
   file->GetNativePath(filePath);
+#endif
 
   NativeLoadData data;
 

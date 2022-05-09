@@ -159,10 +159,10 @@ public:
    *
    * @param   zipEntry   Name of file in archive to extract
    * @param   outFD      Filedescriptor to write contents to
-   * @param   outname    Name of file to write to
+   * @param   outFile    Handle of file to write to
    * @return  status code
    */
-  nsresult ExtractFile(nsZipItem * zipEntry, const char *outname, PRFileDesc * outFD);
+  nsresult ExtractFile(nsZipItem * zipEntry, nsIFile* outFile, PRFileDesc * outFD);
 
   /**
    * FindInit

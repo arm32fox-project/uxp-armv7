@@ -490,7 +490,7 @@ void RecordingPrefChanged(const char *aPrefName, void *aClosure)
     nsAdoptingString prefFileName = Preferences::GetString("gfx.2d.recordingfile");
 
     if (prefFileName) {
-      fileName.Append(NS_ConvertUTF16toUTF8(prefFileName));
+      CopyUTF16toUTF8(prefFileName, fileName);
     } else {
       nsCOMPtr<nsIFile> tmpFile;
       if (NS_FAILED(NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tmpFile)))) {
@@ -502,7 +502,12 @@ void RecordingPrefChanged(const char *aPrefName, void *aClosure)
       if (NS_FAILED(rv))
         return;
 
+#ifdef XP_WIN
+      rv = tmpFile->GetPath(prefFileName);
+      CopyUTF16toUTF8(prefFileName, fileName);
+#else
       rv = tmpFile->GetNativePath(fileName);
+#endif
       if (NS_FAILED(rv))
         return;
     }

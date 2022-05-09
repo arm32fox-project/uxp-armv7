@@ -598,7 +598,11 @@ nsMessenger::DetachAttachmentsWOPrompts(nsIFile* aDestFolder,
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoCString path;
+#ifdef XP_WIN
+  rv = attachmentDestination->GetPersistentDescriptor(path);
+#else
   rv = attachmentDestination->GetNativePath(path);
+#endif
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoString unescapedFileName;
@@ -860,7 +864,11 @@ nsMessenger::SaveOneAttachment(const char * aContentType, const char * aURL,
   SetLastSaveDirectory(localFile);
 
   nsCString dirName;
+#ifdef XP_WIN
+  rv = localFile->GetPersistentDescriptor(dirName);
+#else
   rv = localFile->GetNativePath(dirName);
+#endif
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsSaveAllAttachmentsState *saveState = 
@@ -927,7 +935,11 @@ nsMessenger::SaveAllAttachments(uint32_t count,
 
   nsCString dirName;
   nsSaveAllAttachmentsState *saveState = nullptr;
+#ifdef XP_WIN
+  rv = localFile->GetPersistentDescriptor(dirName);
+#else
   rv = localFile->GetNativePath(dirName);
+#endif
   NS_ENSURE_SUCCESS(rv, rv);
 
   saveState = new nsSaveAllAttachmentsState(count,

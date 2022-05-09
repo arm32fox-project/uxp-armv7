@@ -688,9 +688,13 @@ NS_InitXPCOM2(nsIServiceManager** aResult,
                                     getter_AddRefs(greDir));
   MOZ_ASSERT(greDir);
   nsAutoCString nativeGREPath;
+#ifdef XP_WIN
+  greDir->GetPersistentDescriptor(nativeGREPath);
+#else
   greDir->GetNativePath(nativeGREPath);
-  u_setDataDirectory(nativeGREPath.get());
 #endif
+  u_setDataDirectory(nativeGREPath.get());
+#endif // MOZ_ICU_DATA_ARCHIVE
 
   // Initialize the JS engine.
   const char* jsInitFailureReason = JS_InitWithFailureDiagnostic();

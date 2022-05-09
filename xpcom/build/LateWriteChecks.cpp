@@ -122,10 +122,17 @@ InitLateWriteChecks()
   nsCOMPtr<nsIFile> mozFile;
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mozFile));
   if (mozFile) {
-    nsAutoCString nativePath;
-    nsresult rv = mozFile->GetNativePath(nativePath);
-    if (NS_SUCCEEDED(rv) && nativePath.get()) {
-      sLateWriteObserver = new LateWriteObserver(nativePath.get());
+    nsAutoCString writeObserverPath;
+#ifdef XP_WIN
+    nsAutoString U16Path;
+    nsresult rv = mozFile->GetPath(U16Path);
+    CopyUTF16toUTF8(U16Path, writeObserverPath);
+#else
+    // On non-Windows just get the native path.
+    nsresult rv = mozFile->GetNativePath(writeObserverPath);
+#endif
+    if (NS_SUCCEEDED(rv) && writeObserverPath.get()) {
+      sLateWriteObserver = new LateWriteObserver(writeObserverPath.get());
     }
   }
 }

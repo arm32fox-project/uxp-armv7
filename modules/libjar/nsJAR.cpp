@@ -271,11 +271,7 @@ nsJAR::Extract(const nsACString &aEntryName, nsIFile* outFile)
     if (NS_FAILED(rv)) return rv;
 
     // ExtractFile also closes the fd handle and resolves the symlink if needed
-    nsAutoCString path;
-    rv = outFile->GetNativePath(path);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = mZip->ExtractFile(item, path.get(), fd);
+    rv = mZip->ExtractFile(item, outFile, fd);
   }
   if (NS_FAILED(rv)) return rv;
 
@@ -422,7 +418,11 @@ nsJAR::GetJarPath(nsACString& aResult)
 {
   NS_ENSURE_ARG_POINTER(mZipFile);
 
+#ifdef XP_WIN
+  return mZipFile->GetPersistentDescriptor(aResult);
+#else
   return mZipFile->GetNativePath(aResult);
+#endif
 }
 
 nsresult
@@ -1124,7 +1124,11 @@ nsZipReaderCache::IsCached(nsIFile* zipFile, bool* aResult)
   MutexAutoLock lock(mLock);
 
   nsAutoCString uri;
+#ifdef XP_WIN
+  rv = zipFile->GetPersistentDescriptor(uri);
+#else
   rv = zipFile->GetNativePath(uri);
+#endif
   if (NS_FAILED(rv))
     return rv;
 
@@ -1146,8 +1150,14 @@ nsZipReaderCache::GetZip(nsIFile* zipFile, nsIZipReader* *result)
 #endif
 
   nsAutoCString uri;
+#ifdef XP_WIN
+  rv = zipFile->GetPersistentDescriptor(uri);
+#else
   rv = zipFile->GetNativePath(uri);
-  if (NS_FAILED(rv)) return rv;
+#endif
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   uri.Insert(NS_LITERAL_CSTRING("file:"), 0);
 
@@ -1190,8 +1200,14 @@ nsZipReaderCache::GetInnerZip(nsIFile* zipFile, const nsACString &entry,
 #endif
 
   nsAutoCString uri;
+#ifdef XP_WIN
+  rv = zipFile->GetPersistentDescriptor(uri);
+#else
   rv = zipFile->GetNativePath(uri);
-  if (NS_FAILED(rv)) return rv;
+#endif
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   uri.Insert(NS_LITERAL_CSTRING("jar:"), 0);
   uri.AppendLiteral("!/");
@@ -1233,7 +1249,11 @@ nsZipReaderCache::GetFd(nsIFile* zipFile, PRFileDesc** aRetVal)
 
   nsresult rv;
   nsAutoCString uri;
+#ifdef XP_WIN
+  rv = zipFile->GetPersistentDescriptor(uri);
+#else
   rv = zipFile->GetNativePath(uri);
+#endif
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -1374,8 +1394,13 @@ nsZipReaderCache::Observe(nsISupports *aSubject,
       return NS_OK;
 
     nsAutoCString uri;
+#ifdef XP_WIN
+    if (NS_FAILED(file->GetPersistentDescriptor(uri)))
+      return NS_OK;
+#else
     if (NS_FAILED(file->GetNativePath(uri)))
       return NS_OK;
+#endif
 
     uri.Insert(NS_LITERAL_CSTRING("file:"), 0);
 

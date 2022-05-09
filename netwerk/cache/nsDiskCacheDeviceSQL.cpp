@@ -287,7 +287,11 @@ nsOfflineCacheEvictionFunction::Apply()
   for (int32_t i = 0; i < items.Count(); i++) {
     if (MOZ_LOG_TEST(gCacheLog, LogLevel::Debug)) {
       nsAutoCString path;
+#ifdef XP_WIN
+      items[i]->GetPersistentDescriptor(path);
+#else
       items[i]->GetNativePath(path);
+#endif
       LOG(("  removing %s\n", path.get()));
     }
 

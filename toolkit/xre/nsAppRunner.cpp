@@ -2031,8 +2031,13 @@ SelectProfile(nsIProfileLock* *aResult, nsIToolkitProfileService* aProfileSvc, n
     profile->GetRootDir(getter_AddRefs(prefsJSFile));
     prefsJSFile->AppendNative(NS_LITERAL_CSTRING("prefs.js"));
     nsAutoCString pathStr;
+#ifdef XP_WIN
+    prefsJSFile->GetPersistentDescriptor(pathStr);
+#else
     prefsJSFile->GetNativePath(pathStr);
+#endif
     PR_fprintf(PR_STDERR, "Success: created profile '%s' at '%s'\n", arg, pathStr.get());
+
     bool exists;
     prefsJSFile->Exists(&exists);
     if (!exists) {
@@ -2271,8 +2276,12 @@ CheckCompatibility(nsIFile* aProfileDir, const nsCString& aVersion,
     return false;
 
   nsCOMPtr<nsIFile> lf;
-  rv = NS_NewNativeLocalFile(buf, false,
+  rv = NS_NewNativeLocalFile(EmptyCString(), false,
                              getter_AddRefs(lf));
+  if (NS_FAILED(rv))
+    return false;
+
+  rv = lf->SetPersistentDescriptor(buf);
   if (NS_FAILED(rv))
     return false;
 
@@ -2286,8 +2295,12 @@ CheckCompatibility(nsIFile* aProfileDir, const nsCString& aVersion,
     if (NS_FAILED(rv))
       return false;
 
-    rv = NS_NewNativeLocalFile(buf, false,
+    rv = NS_NewNativeLocalFile(EmptyCString(), false,
                                getter_AddRefs(lf));
+    if (NS_FAILED(rv))
+      return false;
+
+    rv = lf->SetPersistentDescriptor(buf);
     if (NS_FAILED(rv))
       return false;
 
@@ -2330,11 +2343,11 @@ WriteVersion(nsIFile* aProfileDir, const nsCString& aVersion,
   file->AppendNative(FILE_COMPATIBILITY_INFO);
 
   nsAutoCString platformDir;
-  aXULRunnerDir->GetNativePath(platformDir);
+  Unused << aXULRunnerDir->GetPersistentDescriptor(platformDir);
 
   nsAutoCString appDir;
   if (aAppDir)
-    aAppDir->GetNativePath(appDir);
+    Unused << aAppDir->GetPersistentDescriptor(appDir); 
 
   PRFileDesc *fd;
   nsresult rv =
@@ -3672,6 +3685,16 @@ XREMain::XRE_mainRun()
       mProfileSvc->Flush();
     }
   }
+
+#ifndef XP_WIN
+  nsCOMPtr<nsIFile> profileDir;
+  nsAutoCString path;
+  rv = mDirProvider.GetProfileStartupDir(getter_AddRefs(profileDir));
+  if (NS_SUCCEEDED(rv) && NS_SUCCEEDED(profileDir->GetNativePath(path)) && !IsUTF8(path)) {
+    PR_fprintf(PR_STDERR, "Error: The profile path is not valid UTF-8. Unable to continue.\n");
+    return NS_ERROR_FAILURE;
+  }
+#endif
 
   mDirProvider.DoStartup();
 
