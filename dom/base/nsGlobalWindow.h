@@ -897,6 +897,9 @@ public:
   already_AddRefed<mozilla::dom::Worklet>
   CreateWorklet(mozilla::ErrorResult& aRv);
 
+  void
+  GetAppLocales(nsTArray<nsString>& aLocales);
+
 protected:
   bool AlertOrConfirm(bool aAlert, const nsAString& aMessage,
                       nsIPrincipal& aSubjectPrincipal,
