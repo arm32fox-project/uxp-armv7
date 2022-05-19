@@ -25,6 +25,7 @@
 
 #include "mozilla/LookAndFeel.h"
 #include "mozilla/Unused.h"
+#include "mozilla/intl/LocaleService.h"
 
 #include "nsICommandLine.h"
 #include "nsILocaleService.h"
@@ -385,6 +386,7 @@ nsresult nsChromeRegistryChrome::UpdateSelectedLocale()
       NS_ASSERTION(obsSvc, "Couldn't get observer service.");
       obsSvc->NotifyObservers((nsIChromeRegistry*) this,
                               "selected-locale-has-changed", nullptr);
+      mozilla::intl::LocaleService::GetInstance()->Refresh();
     }
   }
 

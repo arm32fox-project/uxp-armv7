@@ -35,7 +35,12 @@ EXPORTS += [
     'nsWin32Locale.h',
 ]
 
+EXPORTS.mozilla.intl += [
+    'LocaleService.h'
+]
+
 UNIFIED_SOURCES += [
+    'LocaleService.cpp',
     'nsCollation.cpp',
     'nsIDateTimeFormat.cpp',
     'nsLanguageAtomService.cpp',
