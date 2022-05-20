@@ -10,6 +10,8 @@
 #include "nsString.h"
 #include "nsTArray.h"
 
+#include "mozILocaleService.h"
+
 namespace mozilla {
 namespace intl {
 
@@ -21,10 +23,29 @@ namespace intl {
  * requested languages and negotiating them to produce a fallback
  * chain of locales for the application.
  */
-class LocaleService
+class LocaleService : public mozILocaleService
 {
 public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_MOZILOCALESERVICE
+
+  /**
+   * Create (if necessary) and return a raw pointer to the singleton instance.
+   * Use this accessor in C++ code that just wants to call a method on the
+   * instance, but does not need to hold a reference, as in
+   *    nsAutoCString str;
+   *    LocaleService::GetInstance()->GetAppLocale(str);
+   */
   static LocaleService* GetInstance();
+
+  /**
+   * Return an addRef'd pointer to the singleton instance. This is used by the
+   * XPCOM constructor that exists to support usage from JS.
+   */
+  static already_AddRefed<LocaleService> GetInstanceAddRefed()
+  {
+    return RefPtr<LocaleService>(GetInstance()).forget();
+  }
 
   /**
    * Returns a list of locales that the application should be localized to.
@@ -73,7 +94,9 @@ protected:
   nsTArray<nsCString> mAppLocales;
 
 private:
-  static StaticAutoPtr<LocaleService> sInstance;
+  virtual ~LocaleService() {};
+
+  static StaticRefPtr<LocaleService> sInstance;
 };
 
 } // intl

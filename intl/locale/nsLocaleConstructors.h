@@ -14,6 +14,7 @@
 #include "nsIServiceManager.h"
 #include "nsLanguageAtomService.h"
 #include "nsPlatformCharset.h"
+#include "LocaleService.h"
 
 #if defined(XP_MACOSX)
 #define USE_MAC_LOCALE
@@ -60,6 +61,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsCollationFactory)
 //NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptableDateTimeFormat)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLanguageAtomService)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPlatformCharset, Init)
+
+namespace mozilla {
+namespace intl {
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(LocaleService,
+                                         LocaleService::GetInstanceAddRefed)
+}
+}
 
 #ifdef XP_WIN
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCollationWin)
