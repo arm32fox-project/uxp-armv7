@@ -458,6 +458,11 @@ public:
     return mSuppressScrollbarRepaints;
   }
 
+
+  void ScrollAnchorWillDestroy();
+
+  void ApplyScrollAnchorOffsetAdjustment();
+
   // owning references to the nsIAnonymousContentCreator-built content
   nsCOMPtr<nsIContent> mHScrollbarContent;
   nsCOMPtr<nsIContent> mVScrollbarContent;
@@ -472,6 +477,7 @@ public:
   nsIFrame* mScrolledFrame;
   nsIFrame* mScrollCornerBox;
   nsIFrame* mResizerBox;
+  nsIFrame* mAnchorNode;
   nsContainerFrame* mOuter;
   RefPtr<AsyncScroll> mAsyncScroll;
   RefPtr<AsyncSmoothMSDScroll> mAsyncSmoothMSDScroll;
@@ -499,6 +505,11 @@ public:
   // 0,0 when this is a new frame. Set to -1,-1 once we've scrolled for any reason
   // other than trying to restore mRestorePos.
   nsPoint mLastPos;
+
+  // The last scroll position of the scroll anchor node. This is in the same
+  // coordinate space as mScrollPort, that is, relative to the parent of this
+  // scrollable frame.
+  nsPoint mLastAnchorPos;
 
   nsExpirationState mActivityExpirationState;
 
@@ -618,6 +629,9 @@ protected:
     ScrollFrameHelper* mHelper;
     bool mOldSuppressValue;
   };
+
+  void UpdateScrollAnchor();
+  nsIFrame* SelectScrollAnchorImpl(nsIFrame* aNode);
 
   /**
    * @note This method might destroy the frame, pres shell and other objects.
@@ -1047,6 +1061,14 @@ public:
   virtual mozilla::a11y::AccType AccessibleType() override;
 #endif
 
+  virtual void ScrollAnchorWillDestroy() override {
+    mHelper.ScrollAnchorWillDestroy();
+  }
+
+  virtual void ApplyScrollAnchorOffsetAdjustment() override {
+    mHelper.ApplyScrollAnchorOffsetAdjustment();
+  }
+
 protected:
   nsHTMLScrollFrame(nsStyleContext* aContext, bool aIsRoot);
   void SetSuppressScrollbarUpdate(bool aSuppress) {
@@ -1470,6 +1492,14 @@ public:
 #ifdef DEBUG_FRAME_DUMP
   virtual nsresult GetFrameName(nsAString& aResult) const override;
 #endif
+
+  virtual void ScrollAnchorWillDestroy() override {
+    mHelper.ScrollAnchorWillDestroy();
+  }
+
+  virtual void ApplyScrollAnchorOffsetAdjustment() override {
+    mHelper.ApplyScrollAnchorOffsetAdjustment();
+  }
 
 protected:
   nsXULScrollFrame(nsStyleContext* aContext, bool aIsRoot,

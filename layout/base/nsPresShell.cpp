@@ -1225,6 +1225,7 @@ PresShell::Destroy()
   }
 
   mFramesToDirty.Clear();
+  mScrollAnchorAdjustments.Clear();
 
   if (mViewManager) {
     // Clear the view manager's weak pointer back to |this| in case it
@@ -2049,6 +2050,11 @@ PresShell::NotifyDestroyingFrame(nsIFrame* aFrame)
     }
 
     mFramesToDirty.RemoveEntry(aFrame);
+
+    nsIScrollableFrame* scrollableFrame = do_QueryFrame(aFrame);
+    if (scrollableFrame) {
+      mScrollAnchorAdjustments.RemoveEntry(scrollableFrame);
+    }
   } else {
     // We must delete this property in situ so that its destructor removes the
     // frame from FrameLayerBuilder::DisplayItemData::mFrameList -- otherwise
@@ -2582,6 +2588,12 @@ PresShell::VerifyHasDirtyRootAncestor(nsIFrame* aFrame)
                 "reflowed?");
 }
 #endif
+
+void
+PresShell::ScrollableFrameNeedsAnchorAdjustment(nsIScrollableFrame* aFrame)
+{
+  mScrollAnchorAdjustments.PutEntry(aFrame);
+}
 
 void
 PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty,
@@ -4106,12 +4118,21 @@ PresShell::FlushPendingNotifications(mozilla::ChangesToFlush aFlush)
       didLayoutFlush = true;
       mFrameConstructor->RecalcQuotesAndCounters();
       viewManager->FlushDelayedResize(true);
-      if (ProcessReflowCommands(flushType < Flush_Layout) && mContentToScrollTo) {
-        // We didn't get interrupted.  Go ahead and scroll to our content
-        DoScrollContentIntoView();
+      if (ProcessReflowCommands(flushType < Flush_Layout)) {
+        // Apply scroll offset updates for scroll anchors.
+        for (auto iter = mScrollAnchorAdjustments.Iter(); !iter.Done(); iter.Next()) {
+          nsIScrollableFrame* frame = iter.Get()->GetKey();
+          frame->ApplyScrollAnchorOffsetAdjustment();
+        }
+        mScrollAnchorAdjustments.Clear();
+
         if (mContentToScrollTo) {
-          mContentToScrollTo->DeleteProperty(nsGkAtoms::scrolling);
-          mContentToScrollTo = nullptr;
+          // We didn't get interrupted; go ahead and scroll to our content.
+          DoScrollContentIntoView();
+          if (mContentToScrollTo) {
+            mContentToScrollTo->DeleteProperty(nsGkAtoms::scrolling);
+            mContentToScrollTo = nullptr;
+          }
         }
       }
     }
@@ -10833,6 +10854,7 @@ PresShell::AddSizeOfIncludingThis(MallocSizeOf aMallocSizeOf,
   }
   *aPresShellSize += mApproximatelyVisibleFrames.ShallowSizeOfExcludingThis(aMallocSizeOf);
   *aPresShellSize += mFramesToDirty.ShallowSizeOfExcludingThis(aMallocSizeOf);
+  *aPresShellSize += mScrollAnchorAdjustments.ShallowSizeOfExcludingThis(aMallocSizeOf);
   *aPresShellSize += aArenaObjectsSize->mOther;
 
   if (nsStyleSet* styleSet = StyleSet()->GetAsGecko()) {

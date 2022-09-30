@@ -486,6 +486,12 @@ public:
   virtual nsCanvasFrame* GetCanvasFrame() const = 0;
 
   /**
+  * Returns whether the scollable frame need to have a position adjustment
+  * based on scroll-anchoring.
+  */
+  virtual void ScrollableFrameNeedsAnchorAdjustment(nsIScrollableFrame* aFrame) = 0;
+
+  /**
    * Tell the pres shell that a frame needs to be marked dirty and needs
    * Reflow.  It's OK if this is an ancestor of the frame needing reflow as
    * long as the ancestor chain between them doesn't cross a reflow root.

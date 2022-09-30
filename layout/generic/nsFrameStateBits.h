@@ -266,6 +266,12 @@ FRAME_STATE_BIT(Generic, 53, NS_FRAME_IS_NONDISPLAY)
 // Frame has a LayerActivityProperty property
 FRAME_STATE_BIT(Generic, 54, NS_FRAME_HAS_LAYER_ACTIVITY_PROPERTY)
 
+// For scroll-anchoring
+FRAME_STATE_BIT(Generic, 55, NS_FRAME_CONTAINS_SCROLL_ANCHOR)
+FRAME_STATE_BIT(Generic, 56, NS_FRAME_IS_SCROLL_ANCHOR)
+
+// Bit 57 is currently unused
+
 // Set for all descendants of MathML sub/supscript elements (other than the
 // base frame) to indicate that the SSTY font feature should be used.
 FRAME_STATE_BIT(Generic, 58, NS_FRAME_MATHML_SCRIPT_DESCENDANT)

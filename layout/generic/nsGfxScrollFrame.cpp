@@ -55,6 +55,7 @@
 #include "nsSVGIntegrationUtils.h"
 #include "nsIScrollPositionListener.h"
 #include "StickyScrollContainer.h"
+#include "nsIFrame.h"
 #include "nsIFrameInlines.h"
 #include "gfxPlatform.h"
 #include "gfxPrefs.h"
@@ -2022,6 +2023,7 @@ ScrollFrameHelper::ScrollFrameHelper(nsContainerFrame* aOuter,
   , mScrolledFrame(nullptr)
   , mScrollCornerBox(nullptr)
   , mResizerBox(nullptr)
+  , mAnchorNode(nullptr)
   , mOuter(aOuter)
   , mAsyncScroll(nullptr)
   , mAsyncSmoothMSDScroll(nullptr)
@@ -2033,6 +2035,7 @@ ScrollFrameHelper::ScrollFrameHelper(nsContainerFrame* aOuter,
   , mScrollPosAtLastPaint(0, 0)
   , mRestorePos(-1, -1)
   , mLastPos(-1, -1)
+  , mLastAnchorPos(0, 0)
   , mScrollPosForLayerPixelAlignment(-1, -1)
   , mLastUpdateFramesPos(-1, -1)
   , mHadDisplayPortAtLastFrameUpdate(false)
@@ -2248,6 +2251,146 @@ CSSIntPoint
 ScrollFrameHelper::GetScrollPositionCSSPixels()
 {
   return CSSIntPoint::FromAppUnitsRounded(GetScrollPosition());
+}
+
+static void
+MarkAsScrollAnchorNode(nsIFrame* aScrolledFrame, nsIFrame* aAnchorNode)
+{
+  aAnchorNode->AddStateBits(NS_FRAME_IS_SCROLL_ANCHOR);
+  nsIFrame* containsAnchor = aAnchorNode->GetParent();
+  while (containsAnchor && containsAnchor != aScrolledFrame) {
+    containsAnchor->AddStateBits(NS_FRAME_CONTAINS_SCROLL_ANCHOR);
+    containsAnchor = containsAnchor->GetParent();
+  }
+}
+
+static void
+UnmarkAsScrollAnchorNode(nsIFrame* aScrolledFrame, nsIFrame* aAnchorNode)
+{
+  aAnchorNode->RemoveStateBits(NS_FRAME_IS_SCROLL_ANCHOR);
+  nsIFrame* containsAnchor = aAnchorNode->GetParent();
+  while (containsAnchor && containsAnchor != aScrolledFrame) {
+    containsAnchor->RemoveStateBits(NS_FRAME_CONTAINS_SCROLL_ANCHOR);
+    containsAnchor = containsAnchor->GetParent();
+  }
+}
+
+static nsRect
+FindScrollAnchorRect(nsIFrame* aScrollableFrame, nsIFrame* aAnchorNode)
+{
+  nsRect rect = aAnchorNode->GetContentRectRelativeToSelf();
+  rect.MoveBy(aAnchorNode->GetOffsetTo(aScrollableFrame->GetParent()));
+  return rect;
+}
+
+void
+ScrollFrameHelper::UpdateScrollAnchor()
+{
+  printf_stderr("\nnsGfxScrollFrame(%p)::UpdateScrollAnchor scrollport=(%d, %d)x(%d, %d)\n",
+    this,
+    mScrollPort.x,
+    mScrollPort.y,
+    mScrollPort.width,
+    mScrollPort.height);
+  MOZ_ASSERT(mScrolledFrame);
+
+  nsIFrame* oldAnchorNode = mAnchorNode;
+  for (nsIFrame* kid : mScrolledFrame->PrincipalChildList()) {
+    nsIFrame* candidate = SelectScrollAnchorImpl(kid);
+    if (candidate) {
+      mAnchorNode = candidate;
+      break;
+    }
+  }
+
+  if (oldAnchorNode != mAnchorNode) {
+    if (oldAnchorNode) {
+      UnmarkAsScrollAnchorNode(mScrolledFrame, oldAnchorNode);
+      // Make sure we stop highlighting the old anchor
+      oldAnchorNode->InvalidateFrame();
+    }
+    if (mAnchorNode) {
+      MarkAsScrollAnchorNode(mScrolledFrame, mAnchorNode);
+      // Make sure we start highlighting the new anchor
+      mAnchorNode->InvalidateFrame();
+    }
+  }
+
+  if (mAnchorNode) {
+    mLastAnchorPos = FindScrollAnchorRect(mOuter, mAnchorNode).TopLeft();
+  } else {
+    mLastAnchorPos = nsPoint();
+  }
+}
+
+nsIFrame*
+ScrollFrameHelper::SelectScrollAnchorImpl(nsIFrame* aNode)
+{
+  nsRect rect = FindScrollAnchorRect(mOuter, aNode);
+
+  bool excludedSubtree =
+    aNode->IsTransformed() ||
+    aNode->GetType() == mozilla::LayoutFrameType::Placeholder ||
+    aNode->GetType() == mozilla::LayoutFrameType::Inline ||
+    aNode->GetType() == mozilla::LayoutFrameType::Line ||
+    aNode->IsRelativelyPositioned(); // should exclude only sticky, this was easier
+  bool opaqueSubtree = aNode->GetType() == mozilla::LayoutFrameType::Scroll;
+
+  nsCString tag;
+  nsIFrame::ListTag(tag, aNode);
+
+  if (excludedSubtree) {
+    printf_stderr("Found excluded subtree [frame=%s]\n",
+      tag.get());
+    return nullptr;
+  }
+
+  bool fullyVisible = mScrollPort.Contains(rect) && !rect.IsEmpty();
+
+  // If this frame is fully visible then select it as the scroll anchor
+  if (fullyVisible) {
+    printf_stderr("Found contained frame [frame=%s rect=(%d, %d)x(%d, %d)]\n",
+      tag.get(),
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height);
+
+    return aNode;
+  }
+
+  // If this frame is partially visible then examine its children for a better
+  // scroll anchor
+  if (mScrollPort.Intersects(rect)) {
+    printf_stderr("Found intersected frame [frame=%s rect=(%d, %d)x(%d, %d)]\n",
+      tag.get(),
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height);
+
+    // This frame is opaque and can be a scroll anchor, but its contents should
+    // not be scroll anchors
+    if (opaqueSubtree) {
+      return aNode;
+    }
+
+    // Try to find a deeper frame that is fully visible in the scroll port
+    for (nsIFrame* kid : aNode->PrincipalChildList()) {
+      nsIFrame* candidate = SelectScrollAnchorImpl(kid);
+      if (candidate) {
+        printf_stderr("Using a closer child frame [frame=%p]\n", candidate);
+        return candidate;
+      }
+    }
+
+    printf_stderr("Fallback to intersected frame [frame=%s]\n",
+      tag.get());
+
+    return aNode;
+  }
+
+  return nullptr;
 }
 
 /*
@@ -2833,6 +2976,7 @@ ScrollFrameHelper::ScrollToImpl(nsPoint aPt, const nsRect& aRange, nsIAtom* aOri
   mScrollGeneration = ++sScrollGenerationCounter;
 
   ScrollVisual();
+  UpdateScrollAnchor();
 
   bool schedulePaint = true;
   if (nsLayoutUtils::AsyncPanZoomEnabled(mOuter) && gfxPrefs::APZPaintSkipping()) {
@@ -4342,6 +4486,7 @@ ScrollFrameHelper::ReloadChildFrames()
   mVScrollbarBox = nullptr;
   mScrollCornerBox = nullptr;
   mResizerBox = nullptr;
+  mAnchorNode = nullptr;
 
   for (nsIFrame* frame : mOuter->PrincipalChildList()) {
     nsIContent* content = frame->GetContent();
@@ -6250,3 +6395,42 @@ ScrollFrameHelper::UsesContainerScrolling() const
   return false;
 }
 
+void
+ScrollFrameHelper::ScrollAnchorWillDestroy()
+{
+  if (mAnchorNode) {
+    UnmarkAsScrollAnchorNode(mScrolledFrame, mAnchorNode);
+    mAnchorNode = nullptr;
+    mLastAnchorPos = nsPoint();
+    // XXX Should we calculate a new one anchor here, or push a callback
+    // to do that at a safer time?
+  }
+}
+
+void
+ScrollFrameHelper::ApplyScrollAnchorOffsetAdjustment()
+{
+  MOZ_ASSERT(mAnchorNode);
+
+  nsPoint currentAnchorPos = FindScrollAnchorRect(mOuter, mAnchorNode).TopLeft();
+  nsPoint adjustment = currentAnchorPos - mLastAnchorPos;
+  nsIntPoint adjustmentDevicePixels = adjustment
+    .ToNearestPixels(mOuter->PresContext()->AppUnitsPerDevPixel());
+
+  printf_stderr("nsGfxScrollFrame(%p)::ApplyScrollAnchorOffsetAdjustment adjustment=(%d, %d)\n",
+    this,
+    adjustmentDevicePixels.x,
+    adjustmentDevicePixels.y);
+
+  nsIFrame* scrollAnchor = mAnchorNode;
+
+  ScrollBy(adjustmentDevicePixels,
+           nsIScrollableFrame::DEVICE_PIXELS,
+           nsIScrollableFrame::INSTANT,
+           nullptr,
+           nsGkAtoms::relative);
+
+  // The last scroll anchor offset should be updated within ScrollToImpl and
+  // the scroll anchor should not have changed
+  MOZ_ASSERT(scrollAnchor == mAnchorNode);
+}

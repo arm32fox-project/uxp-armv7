@@ -688,6 +688,20 @@ nsFrame::DestroyFrom(nsIFrame* aDestructRoot)
     }
   }
 
+  if (HasAnyStateBits(NS_FRAME_IS_SCROLL_ANCHOR)) {
+    // Find the nearest scroll frame, that's the one that marked us as a
+    // scroll anchor
+    nsIFrame* currentFrame = this;
+    while (currentFrame) {
+      nsIScrollableFrame* scrollTarget = currentFrame->GetScrollTargetFrame();
+      if (scrollTarget) {
+        scrollTarget->ScrollAnchorWillDestroy();
+        break;
+      }
+      currentFrame = currentFrame->GetParent();
+    }
+  }
+
   if (HasCSSAnimations() || HasCSSTransitions() ||
       EffectSet::GetEffectSet(this)) {
     // If no new frame for this element is created by the end of the
@@ -810,6 +824,35 @@ AddAndRemoveImageAssociations(nsFrame* aFrame,
       if (imgRequestProxy* req = newImage.GetImageData()) {
         imageLoader->AssociateRequestToFrame(req, aFrame);
       }
+    }
+  }
+}
+
+void
+nsIFrame::MaybeNotifyScrollAnchor()
+{
+  bool isScrollAnchor = HasAnyStateBits(NS_FRAME_IS_SCROLL_ANCHOR);
+  bool containsScrollAnchor = HasAnyStateBits(NS_FRAME_CONTAINS_SCROLL_ANCHOR);
+
+  if (isScrollAnchor) {
+    printf_stderr("nsIFrame(%p)::MaybeNotifyScrollAnchor scroll anchor offset changed, queueing adjustment.\n", this);
+  }
+  if (containsScrollAnchor) {
+    printf_stderr("nsIFrame(%p)::MaybeNotifyScrollAnchor offset for scroll anchor container changed, queueing adjustment.\n", this);
+  }
+  MOZ_ASSERT(!(isScrollAnchor && containsScrollAnchor));
+
+  if (isScrollAnchor || containsScrollAnchor) {
+    // Find the nearest scroll frame, that's the one that marked us as a
+    // scroll anchor
+    nsIFrame* currentFrame = this;
+    while (currentFrame) {
+      nsIScrollableFrame* scrollTarget = currentFrame->GetScrollTargetFrame();
+      if (scrollTarget) {
+        PresShell().ScrollableFrameNeedsAnchorAdjustment(scrollTarget);
+        break;
+      }
+      currentFrame = currentFrame->GetParent();
     }
   }
 }
@@ -2902,6 +2945,13 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
 
       aBuilder->AdjustWindowDraggingRegion(child);
       child->BuildDisplayList(aBuilder, aLists);
+/*      // Visualise scroll anchor
+      if (child->HasAnyStateBits(NS_FRAME_IS_SCROLL_ANCHOR)) {
+        nsRect bounds = child->GetContentRectRelativeToSelf() +
+          aBuilder->ToReferenceFrame(child);
+        list.AppendToTop(MakeDisplayItem<nsDisplaySolidColor>(aBuilder, child, bounds, NS_RGBA(255, 0, 0, 55)));
+      }
+      // */
       aBuilder->DisplayCaret(child, aLists.Content());
 #ifdef DEBUG
       DisplayDebugBorders(aBuilder, child, aLists);
@@ -2916,6 +2966,13 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
     nsDisplayListCollection pseudoStack(aBuilder);
     aBuilder->AdjustWindowDraggingRegion(child);
     child->BuildDisplayList(aBuilder, pseudoStack);
+/*    // Visualise scroll anchor
+    if (child->HasAnyStateBits(NS_FRAME_IS_SCROLL_ANCHOR)) {
+      nsRect bounds = child->GetContentRectRelativeToSelf() +
+        aBuilder->ToReferenceFrame(child);
+      list.AppendToTop(MakeDisplayItem<nsDisplaySolidColor>(aBuilder, child, bounds, NS_RGBA(255, 0, 0, 55)));
+    }
+    // */
     aBuilder->DisplayCaret(child, pseudoStack.Content());
 
     list.AppendToTop(pseudoStack.BorderBackground());

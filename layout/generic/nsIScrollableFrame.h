@@ -475,6 +475,9 @@ public:
   virtual ScrollSnapInfo GetScrollSnapInfo() const = 0;
 
   virtual void SetScrollsClipOnUnscrolledOutOfFlow() = 0;
+
+  virtual void ScrollAnchorWillDestroy() = 0;
+  virtual void ApplyScrollAnchorOffsetAdjustment() = 0;
 };
 
 #endif

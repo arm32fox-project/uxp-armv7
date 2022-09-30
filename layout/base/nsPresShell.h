@@ -129,6 +129,8 @@ public:
   virtual nsIPageSequenceFrame* GetPageSequenceFrame() const override;
   virtual nsCanvasFrame* GetCanvasFrame() const override;
 
+  virtual void ScrollableFrameNeedsAnchorAdjustment(nsIScrollableFrame* aFrame) override;
+  
   virtual void FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty,
                                 nsFrameState aBitToAdd,
                                 ReflowRootHandling aRootHandling =
@@ -427,8 +429,9 @@ public:
 
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
-protected:
   virtual ~PresShell();
+
+protected:
 
   void HandlePostedReflowCallbacks(bool aInterruptible);
   void CancelPostedReflowCallbacks();
@@ -852,6 +855,8 @@ protected:
   // Set of frames that we should mark with NS_FRAME_HAS_DIRTY_CHILDREN after
   // we finish reflowing mCurrentReflowRoot.
   nsTHashtable<nsPtrHashKey<nsIFrame> > mFramesToDirty;
+  
+  nsTHashtable<nsPtrHashKey<nsIScrollableFrame> > mScrollAnchorAdjustments;
 
   // Reflow roots that need to be reflowed.
   nsTArray<nsIFrame*>       mDirtyRoots;

@@ -861,6 +861,7 @@ public:
     } else {
       mRect = aRect;
     }
+    MaybeNotifyScrollAnchor();
   }
   /**
    * Set this frame's rect from a logical rect in its own writing direction
@@ -922,6 +923,7 @@ public:
     // the top right of the frame instead of the top left.
     mRect.MoveTo(aPt.GetPhysicalPoint(aWritingMode,
                                       aContainerSize - mRect.Size()));
+    MaybeNotifyScrollAnchor();
   }
 
   /**
@@ -2742,6 +2744,8 @@ public:
                          const nsRect* aFrameDamageRect = nullptr,
                          uint32_t aFlags = 0);
 
+  void MaybeNotifyScrollAnchor();
+  
   /**
    * Returns a rect that encompasses everything that might be painted by
    * this frame.  This includes this frame, all its descendant frames, this
