@@ -2955,6 +2955,11 @@ struct MOZ_NEEDS_MEMMOVABLE_MEMBERS nsStyleDisplay
     return mozilla::StyleFloat::None != mFloat;
   }
 
+  bool IsPositionedStyle() const {
+    return mPosition != NS_STYLE_POSITION_STATIC ||
+           (mWillChangeBitField & NS_STYLE_WILL_CHANGE_ABSPOS_CB);
+  }
+
   bool IsAbsolutelyPositionedStyle() const {
     return NS_STYLE_POSITION_ABSOLUTE == mPosition ||
            NS_STYLE_POSITION_FIXED == mPosition;

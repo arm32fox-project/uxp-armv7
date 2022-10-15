@@ -1,0 +1,22 @@
+<!doctype html>
+<title>z-index doesn't apply to transformed content which is not positioned</title>
+<link rel="author" title="Moonchild Straver">
+<link rel="match" href="z-index-does-not-apply-ref.html">
+<style>
+  #a, #b {
+    background: green;
+    width: 100px;
+    height: 100px;
+  }
+  #a {
+    background: red;
+    z-index: 2;
+    transform: translateX(0);
+  }
+  #b {
+    z-index: 1;
+    transform: translateY(-100px);
+  }
+</style>
+<div id="a"></div>
+<div id="b"></div>
