@@ -10,5 +10,3 @@ random-if(transparentScrollbars) == overlayscrollbar-sorting-1.html overlayscrol
 == overlayscrollbar-sorting-3.html overlayscrollbar-sorting-ref-hidden.html
 == overlayscrollbar-sorting-4.html overlayscrollbar-sorting-ref-hidden.html
 random-if(transparentScrollbars) == overlayscrollbar-sorting-5.html overlayscrollbar-sorting-ref-visible.html
-== z-index-does-not-apply-transform.html z-index-does-not-apply-ref.html
-== z-index-does-not-apply-filter.html z-index-does-not-apply-ref.html

@@ -2780,20 +2780,18 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
   const nsStyleDisplay* disp = child->StyleDisplay();
   const nsStyleEffects* effects = child->StyleEffects();
   const nsStylePosition* pos = child->StylePosition();
-  const bool isPositioned = disp->IsPositionedStyle();
   const bool isVisuallyAtomic = child->HasOpacity()
+    || child->IsTransformed()
     // strictly speaking, 'perspective' doesn't require visual atomicity,
     // but the spec says it acts like the rest of these
     || disp->mChildPerspective.GetUnit() == eStyleUnit_Coord
-    // the following should only be atomic for positioned elements
-    || (isPositioned &&
-         (effects->mMixBlendMode != NS_STYLE_BLEND_NORMAL
-          || nsSVGIntegrationUtils::UsingEffectsForFrame(child)));
+    || effects->mMixBlendMode != NS_STYLE_BLEND_NORMAL
+    || nsSVGIntegrationUtils::UsingEffectsForFrame(child);
 
+  const bool isPositioned = disp->IsAbsPosContainingBlock(child);
   const bool isStackingContext =
     (isPositioned && (disp->IsPositionForcingStackingContext() ||
                       pos->mZIndex.GetUnit() == eStyleUnit_Integer)) ||
-     (!isPositioned && child->IsTransformed()) ||
      (disp->mWillChangeBitField & NS_STYLE_WILL_CHANGE_STACKING_CONTEXT) ||
      disp->mIsolation != NS_STYLE_ISOLATION_AUTO ||
      isVisuallyAtomic || (aFlags & DISPLAY_CHILD_FORCE_STACKING_CONTEXT);
