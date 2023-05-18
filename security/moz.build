@@ -80,6 +80,8 @@ gyp_vars['nspr_lib_dir'] = CONFIG['NSPR_LIB_DIR']
 gyp_vars['NSS_DISABLE_AVX2'] = 1
 if CONFIG['CLANG_CXX']:
     gyp_vars['cc_is_clang'] = 1
+# Don't disable FIPS for those who insist they need it
+gyp_vars['disable_fips'] = 0
 
 GYP_DIRS += ['nss']
 GYP_DIRS['nss'].input = 'nss/nss.gyp'
