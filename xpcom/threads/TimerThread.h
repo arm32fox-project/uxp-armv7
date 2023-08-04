@@ -69,10 +69,6 @@ private:
   already_AddRefed<nsTimerImpl> PostTimerEvent(already_AddRefed<nsTimerImpl> aTimerRef);
 
   nsCOMPtr<nsIThread> mThread;
-  // Lock ordering requirements:
-  // (optional) ThreadWrapper::sMutex ->
-  // (optional) nsTimerImpl::mMutex   ->
-  // TimerThread::mMonitor
   Monitor mMonitor;
 
   bool mShutdown;
