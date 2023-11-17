@@ -23,3 +23,37 @@ interface Clipboard : EventTarget {
   Promise<void> writeText(DOMString data);
 };
 
+
+// Note: The spec uses ClipboardItemData instead of Blob.
+//       All current implementers however use Blob. Spec change needed.
+// typedef (DOMString or Blob) ClipboardItemDataType;
+// typedef Promise<ClipboardItemDataType> ClipboardItemData;
+// callback ClipboardItemDelayedCallback = ClipboardItemData ();
+
+[Constructor(record<DOMString, Blob> items, optional ClipboardItemOptions options),
+ SecureContext, Exposed=Window, Pref="dom.events.asyncClipboard.clipboardItem"]
+interface ClipboardItem {
+  // NYI:
+  // static ClipboardItem createDelayed(
+  //     record<DOMString, ClipboardItemDelayedCallback> items,
+  //     optional ClipboardItemOptions options = {});
+
+  readonly attribute PresentationStyle presentationStyle;
+  // NYI:
+  // readonly attribute long long lastModified;
+  // readonly attribute boolean delayed;
+
+  // TODO: Use FrozenArray once available. (Bug 1236777)
+  // readonly attribute FrozenArray<DOMString> types;
+  [Frozen, Cached, Pure]
+  readonly attribute sequence<DOMString> types;
+
+  [Throws]
+  Promise<Blob> getType(DOMString type);
+};
+
+enum PresentationStyle { "unspecified", "inline", "attachment" };
+
+dictionary ClipboardItemOptions {
+  PresentationStyle presentationStyle = "unspecified";
+};

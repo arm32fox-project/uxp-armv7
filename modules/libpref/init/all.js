@@ -5105,4 +5105,5 @@ pref("media.sourceErrorDetails.enabled", false);
 pref("dom.events.asyncClipboard", false);
 // Whether arbitrary data transfer methods (not plaintext) are allowed.
 pref("dom.events.asyncClipboard.dataTransfer", false);
-
+// Whether to use ClipboardItem spec or not.
+pref("dom.events.asyncClipboard.clipboardItem", false);
