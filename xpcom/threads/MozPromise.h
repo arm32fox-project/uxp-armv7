@@ -229,14 +229,15 @@ private:
       mResolveValues.SetLength(aDependentPromises);
     }
 
-    void Resolve(size_t aIndex, ResolveValueType&& aResolveValue)
-    {
+    template <typename ResolveValueType_>
+    void Resolve(size_t aIndex, ResolveValueType_&& aResolveValue) {
       if (!mPromise) {
         // Already rejected.
         return;
       }
 
-      mResolveValues[aIndex].emplace(Move(aResolveValue));
+      mResolveValues[aIndex].emplace(
+          std::forward<ResolveValueType_>(aResolveValue));
       if (--mOutstandingPromises == 0) {
         nsTArray<ResolveValueType> resolveValues;
         resolveValues.SetCapacity(mResolveValues.Length());
@@ -250,14 +251,14 @@ private:
       }
     }
 
-    void Reject(RejectValueType&& aRejectValue)
-    {
+    template <typename RejectValueType_>
+    void Reject(RejectValueType_&& aRejectValue) {
       if (!mPromise) {
         // Already rejected.
         return;
       }
 
-      mPromise->Reject(Move(aRejectValue), __func__);
+      mPromise->Reject(std::forward<RejectValueType_>(aRejectValue), __func__);
       mPromise = nullptr;
       mResolveValues.Clear();
     }
@@ -269,6 +270,15 @@ private:
     RefPtr<typename AllPromiseType::Private> mPromise;
     size_t mOutstandingPromises;
   };
+  
+  typedef std::conditional_t<IsExclusive, ResolveValueType&&,
+                             const ResolveValueType&>
+      ResolveValueTypeParam;
+
+  typedef std::conditional_t<IsExclusive, RejectValueType&&,
+                             const RejectValueType&>
+      RejectValueTypeParam;
+
 public:
 
   static RefPtr<AllPromiseType> All(AbstractThread* aProcessingThread, nsTArray<RefPtr<MozPromise>>& aPromises)
@@ -276,8 +286,8 @@ public:
     RefPtr<AllPromiseHolder> holder = new AllPromiseHolder(aPromises.Length());
     for (size_t i = 0; i < aPromises.Length(); ++i) {
       aPromises[i]->Then(aProcessingThread, __func__,
-        [holder, i] (ResolveValueType aResolveValue) -> void { holder->Resolve(i, Move(aResolveValue)); },
-        [holder] (RejectValueType aRejectValue) -> void { holder->Reject(Move(aRejectValue)); }
+        [holder, i] (ResolveValueTypeParam aResolveValue) -> void { holder->Resolve(i, Move(aResolveValue)); },
+        [holder] (RejectValueTypeParam aRejectValue) -> void { holder->Reject(Move(aRejectValue)); }
       );
     }
     return holder->Promise();
