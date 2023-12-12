@@ -401,6 +401,10 @@ const kEventConstructors = {
                                                        },
                                                chromeOnly: true,
                                              },
+  SubmitEvent:                               { create: function (aName, aProps) {
+                                                         return new SubmitEvent(aName, aProps);
+                                                       },
+                                             },
   SVGZoomEvent:                              { create: function (aName, aProps) {
                                                          var e = document.createEvent("svgzoomevent");
                                                          e.initUIEvent(aName, aProps.bubbles, aProps.cancelable,

@@ -461,8 +461,6 @@ protected:
     RefPtr<HTMLFormElement> mForm;
   };
 
-  nsresult DoSubmitOrReset(WidgetEvent* aEvent,
-                           EventMessage aMessage);
   nsresult DoReset();
 
   // Async callback to handle removal of our default submit
@@ -474,12 +472,11 @@ protected:
   //
   /**
    * Attempt to submit (submission might be deferred)
-   * (called by DoSubmitOrReset)
    *
    * @param aPresContext the presentation context
    * @param aEvent the DOM event that was passed to us for the submit
    */
-  nsresult DoSubmit(WidgetEvent* aEvent);
+  nsresult DoSubmit(Event* aEvent = nullptr);
 
   /**
    * Prepare the submission object (called by DoSubmit)
@@ -487,8 +484,8 @@ protected:
    * @param aFormSubmission the submission object
    * @param aEvent the DOM event that was passed to us for the submit
    */
-  nsresult BuildSubmission(HTMLFormSubmission** aFormSubmission,
-                           WidgetEvent* aEvent);
+  nsresult BuildSubmission(HTMLFormSubmission** aFormSubmission, Event* aEvent);
+
   /**
    * Perform the submission (called by DoSubmit and FlushPendingSubmission)
    *
