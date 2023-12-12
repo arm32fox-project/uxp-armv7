@@ -15,6 +15,7 @@
 #include "mozilla/dom/nsCSPContext.h"
 #include "mozilla/dom/HTMLFormControlsCollection.h"
 #include "mozilla/dom/HTMLFormElementBinding.h"
+#include "mozilla/dom/SubmitEvent.h"
 #include "mozilla/Move.h"
 #include "nsIHTMLDocument.h"
 #include "nsGkAtoms.h"
@@ -262,7 +263,7 @@ HTMLFormElement::Submit(ErrorResult& aRv)
     mPendingSubmission = nullptr;
   }
 
-  aRv = DoSubmitOrReset(nullptr, eFormSubmit);
+  aRv = DoSubmit();
 }
 
 NS_IMETHODIMP
@@ -548,9 +549,12 @@ HTMLFormElement::PostHandleEvent(EventChainPostVisitor& aVisitor)
 
     if (aVisitor.mEventStatus == nsEventStatus_eIgnore) {
       switch (msg) {
-        case eFormReset:
+        case eFormReset: {
+          DoReset();
+          break;
+        }
         case eFormSubmit: {
-          if (mPendingSubmission && msg == eFormSubmit) {
+          if (mPendingSubmission) {
             // tell the form to forget a possible pending submission.
             // the reason is that the script returned true (the event was
             // ignored) so if there is a stored submission, it will miss
@@ -558,7 +562,7 @@ HTMLFormElement::PostHandleEvent(EventChainPostVisitor& aVisitor)
             // to forget it and the form element will build a new one
             mPendingSubmission = nullptr;
           }
-          DoSubmitOrReset(aVisitor.mEvent, msg);
+          DoSubmit(aVisitor.mDOMEvent);
           break;
         }
         default:
@@ -584,8 +588,7 @@ HTMLFormElement::PostHandleEvent(EventChainPostVisitor& aVisitor)
 }
 
 nsresult
-HTMLFormElement::DoSubmitOrReset(WidgetEvent* aEvent,
-                                 EventMessage aMessage)
+HTMLFormElement::DoReset()
 {
   // Make sure the presentation is up-to-date
   nsIDocument* doc = GetComposedDoc();
@@ -593,29 +596,6 @@ HTMLFormElement::DoSubmitOrReset(WidgetEvent* aEvent,
     doc->FlushPendingNotifications(Flush_ContentAndNotify);
   }
 
-  // JBK Don't get form frames anymore - bug 34297
-
-  // Submit or Reset the form
-  if (eFormReset == aMessage) {
-    return DoReset();
-  }
-
-  if (eFormSubmit == aMessage) {
-    // Don't submit if we're not in a document or if we're in
-    // a sandboxed frame and form submit is disabled.
-    if (!doc || (doc->GetSandboxFlags() & SANDBOXED_FORMS)) {
-      return NS_OK;
-    }
-    return DoSubmit(aEvent);
-  }
-
-  MOZ_ASSERT(false);
-  return NS_OK;
-}
-
-nsresult
-HTMLFormElement::DoReset()
-{
   // JBK walk the elements[] array instead of form frame controls - bug 34297
   uint32_t numElements = GetElementCount();
   for (uint32_t elementX = 0; elementX < numElements; ++elementX) {
@@ -635,10 +615,20 @@ HTMLFormElement::DoReset()
     return rv;                                                                \
   }
 
-nsresult
-HTMLFormElement::DoSubmit(WidgetEvent* aEvent)
-{
-  NS_ASSERTION(GetComposedDoc(), "Should never get here without a current doc");
+nsresult HTMLFormElement::DoSubmit(Event* aEvent) {
+  nsIDocument* doc = GetComposedDoc();
+  NS_ASSERTION(doc, "Should never get here without a current doc");
+
+  // Make sure the presentation is up-to-date
+  if (doc) {
+    doc->FlushPendingNotifications(Flush_ContentAndNotify);
+  }
+
+  // Don't submit if we're not in a document or if we're in
+  // a sandboxed frame and form submit is disabled.
+  if (!doc || (doc->GetSandboxFlags() & SANDBOXED_FORMS)) {
+    return NS_OK;
+  }
 
   if (mIsSubmitting) {
     NS_WARNING("Preventing double form submission");
@@ -691,22 +681,16 @@ HTMLFormElement::DoSubmit(WidgetEvent* aEvent)
 
 nsresult
 HTMLFormElement::BuildSubmission(HTMLFormSubmission** aFormSubmission,
-                                 WidgetEvent* aEvent)
+                                 Event* aEvent)
 {
   NS_ASSERTION(!mPendingSubmission, "tried to build two submissions!");
 
-  // Get the originating frame (failure is non-fatal)
+  // Get the originating frame
   nsGenericHTMLElement* originatingElement = nullptr;
   if (aEvent) {
-    InternalFormEvent* formEvent = aEvent->AsFormEvent();
-    if (formEvent) {
-      nsIContent* originator = formEvent->mOriginator;
-      if (originator) {
-        if (!originator->IsHTMLElement()) {
-          return NS_ERROR_UNEXPECTED;
-        }
-        originatingElement = static_cast<nsGenericHTMLElement*>(originator);
-      }
+    SubmitEvent* submitEvent = aEvent->AsSubmitEvent();
+    if (submitEvent) {
+      originatingElement = submitEvent->GetSubmitter();
     }
   }
 
