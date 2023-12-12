@@ -392,6 +392,19 @@ public:
 
   // XPCOM Reset() is OK
 
+  /**
+   * Requests to submit the form. Unlike submit(), this method includes
+   * interactive constraint validation and firing a submit event,
+   * either of which can cancel submission.
+   *
+   * @param aSubmitter The submitter argument can be used to point to a specific
+   *                   submit button.
+   * @param aRv        An ErrorResult.
+   * @see
+   * https://html.spec.whatwg.org/multipage/forms.html#dom-form-requestsubmit
+   */
+  void RequestSubmit(nsGenericHTMLElement* aSubmitter, ErrorResult& aRv);
+
   bool CheckValidity()
   {
     return CheckFormValidity(nullptr);

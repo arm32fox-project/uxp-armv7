@@ -209,6 +209,9 @@ pref("dom.requestIdleCallback.enabled", true);
 // See WD https://www.w3.org/TR/intersection-observer/
 pref("dom.intersectionObserver.enabled", true);
 
+// Whether the form.requestSubmit API is enabled
+pref("dom.forms.requestsubmit.enabled", true);
+
 #ifdef MOZ_GAMEPAD
 // Whether the Gamepad API is enabled
 pref("dom.gamepad.enabled", true);
